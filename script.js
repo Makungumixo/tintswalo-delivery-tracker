@@ -1,75 +1,94 @@
-const farmLatLng = [-23.35906, 30.50142];
-let waypoints = [];
-let routingControl = null;
+const farmLatLng = L.latLng(-23.358, 30.5014); // Gandlanani Khani
+let map = L.map("map").setView(farmLatLng, 12);
 
-const baseMaps = {
-  Standard: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors"
-  }),
-  Satellite: L.tileLayer(
-    "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-    {
-      maxZoom: 20,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attribution: "© Google"
-    }
-  )
+let baseMaps = {
+  "Streets": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+  "Satellite": L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+    subdomains: ["mt0", "mt1", "mt2", "mt3"],
+  })
 };
 
-let currentMapType = "Standard";
-let map = L.map("map", {
-  center: farmLatLng,
-  zoom: 11,
-  layers: [baseMaps.Standard]
-});
+baseMaps["Streets"].addTo(map); // default view
 
-L.marker(farmLatLng).addTo(map).bindPopup("Tintswalo's Poultry Farm");
+L.control.layers(baseMaps).addTo(map);
+
+let sidebar = document.getElementById("sidebar");
+document.getElementById("admin-toggle").onclick = () => {
+  sidebar.classList.toggle("open");
+};
+
+let deliveryPoints = [];
+let markers = [];
+let routingControl = null;
 
 map.on("click", function (e) {
-  waypoints.push(L.latLng(e.latlng.lat, e.latlng.lng));
-  const li = document.createElement("li");
-  li.textContent = `Stop ${waypoints.length}: (${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)})`;
-  document.getElementById("waypoints-list").appendChild(li);
+  const index = deliveryPoints.length + 1;
+  const label = `Stop ${index}`;
+  L.marker(e.latlng, { title: label })
+    .bindPopup(label)
+    .addTo(map)
+    .openPopup();
+  markers.push(e.latlng);
+  deliveryPoints.push(e.latlng);
 });
-
-function calculateRoute() {
-  if (routingControl) map.removeControl(routingControl);
-  let routePoints = [L.latLng(farmLatLng), ...waypoints];
-
-  routingControl = L.Routing.control({
-    waypoints: routePoints,
-    routeWhileDragging: false,
-    draggableWaypoints: false,
-    addWaypoints: false
-  }).addTo(map);
-
-  routingControl.on("routesfound", function (e) {
-    const routes = e.routes[0];
-    const stepsContainer = document.getElementById("route-steps");
-    stepsContainer.innerHTML = "";
-    for (let i = 0; i < routes.instructions.length; i++) {
-      const li = document.createElement("li");
-      li.innerText = routes.instructions[i].text;
-      stepsContainer.appendChild(li);
-    }
-  });
-}
 
 function clearRoute() {
   if (routingControl) map.removeControl(routingControl);
-  waypoints = [];
-  document.getElementById("waypoints-list").innerHTML = "";
-  document.getElementById("route-steps").innerHTML = "";
+  deliveryPoints = [];
+  markers = [];
+  document.getElementById("instructions").innerHTML = "";
+  document.getElementById("distanceOutput").innerText = "";
 }
 
-document.getElementById("admin-toggle").onclick = () => {
-  document.getElementById("sidebar").classList.toggle("collapsed");
-};
+function calculateRoute() {
+  if (deliveryPoints.length < 1) return alert("Add at least one stop!");
 
-document.getElementById("satellite-toggle").onclick = () => {
-  currentMapType =
-    currentMapType === "Standard" ? "Satellite" : "Standard";
-  map.eachLayer(layer => map.removeLayer(layer));
-  baseMaps[currentMapType].addTo(map);
-  if (routingControl) routingControl.addTo(map);
-};
+  let from = farmLatLng;
+  let stops = [...deliveryPoints];
+
+  // Nearest Neighbor Algorithm
+  let route = [from];
+  while (stops.length) {
+    let last = route[route.length - 1];
+    let nearestIndex = 0;
+    let nearestDist = last.distanceTo(stops[0]);
+    for (let i = 1; i < stops.length; i++) {
+      const dist = last.distanceTo(stops[i]);
+      if (dist < nearestDist) {
+        nearestIndex = i;
+        nearestDist = dist;
+      }
+    }
+    route.push(stops.splice(nearestIndex, 1)[0]);
+  }
+
+  if (routingControl) map.removeControl(routingControl);
+
+  routingControl = L.Routing.control({
+    waypoints: route,
+    lineOptions: {
+      styles: [{ color: "#1f6feb", weight: 4 }]
+    },
+    routeWhileDragging: false,
+    show: false,
+    createMarker: (i, wp) => {
+      const label = i === 0 ? "Farm" : `Stop ${i}`;
+      return L.marker(wp.latLng).bindPopup(label);
+    }
+  }).addTo(map);
+
+  routingControl.on("routesfound", function (e) {
+    const route = e.routes[0];
+    const totalDistance = route.summary.totalDistance / 1000;
+    const rate = parseFloat(document.getElementById("rateInput").value || 0);
+    const cost = rate * totalDistance;
+    document.getElementById("distanceOutput").innerText =
+      `Distance: ${totalDistance.toFixed(2)} km | Estimated Cost: R${cost.toFixed(2)}`;
+
+    const waypoints = route.waypoints.map((wp, i) =>
+      i === 0 ? "Start at the Farm" : `Then go to Stop ${i}`
+    );
+    document.getElementById("instructions").innerHTML = waypoints.join("<br>");
+  });
+}
+
