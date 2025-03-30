@@ -1,71 +1,90 @@
-let map = L.map('map').setView([-23.3076, 30.7085], 10); // Starting view at Limpopo
+const farmLocation = L.latLng(-23.359056, 30.501417); // Gandlanani Khani coordinates
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
+const map = L.map('map').setView(farmLocation, 10);
+let satellite = false;
+let destinations = [];
+let control;
+
+const standardLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+const satelliteLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+  subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+});
+
+standardLayer.addTo(map);
+
+// Geocoder control
+L.Control.geocoder({
+  defaultMarkGeocode: false
+}).on('markgeocode', function(e) {
+  const latlng = e.geocode.center;
+  L.marker(latlng).addTo(map);
+  destinations.push(latlng);
 }).addTo(map);
 
-// Coordinates of the farm (starting point)
-const farmCoords = [-23.3076, 30.7085];
-L.marker(farmCoords).addTo(map).bindPopup("Tintswalo’s Poultry Farm").openPopup();
+// Search by typing address
+document.getElementById("locationSearch").addEventListener("keypress", function(e) {
+  if (e.key === 'Enter') {
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${this.value}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.length > 0) {
+          const lat = data[0].lat;
+          const lon = data[0].lon;
+          const latlng = L.latLng(lat, lon);
+          L.marker(latlng).addTo(map);
+          map.setView(latlng, 13);
+          destinations.push(latlng);
+        }
+      });
+  }
+});
 
-let deliveryPoints = [];
-let routingControl = null;
+// Click to add destination
+map.on('click', function(e) {
+  L.marker(e.latlng).addTo(map);
+  destinations.push(e.latlng);
+});
 
-function addLocation() {
-  const name = document.getElementById('locationName').value;
-  const lat = parseFloat(document.getElementById('latitude').value);
-  const lon = parseFloat(document.getElementById('longitude').value);
+function toggleSatellite() {
+  if (satellite) {
+    map.removeLayer(satelliteLayer);
+    standardLayer.addTo(map);
+  } else {
+    map.removeLayer(standardLayer);
+    satelliteLayer.addTo(map);
+  }
+  satellite = !satellite;
+}
 
-  if (!name || isNaN(lat) || isNaN(lon)) {
-    alert("Please enter valid name and coordinates.");
+function clearDestinations() {
+  destinations = [];
+  map.eachLayer(layer => {
+    if (layer instanceof L.Marker && !layer._icon.classList.contains('leaflet-routing-icon')) {
+      map.removeLayer(layer);
+    }
+  });
+  if (control) map.removeControl(control);
+  document.getElementById("summary").innerText = "";
+}
+
+function optimizeRoute() {
+  if (destinations.length < 1) {
+    alert("Add at least one destination.");
     return;
   }
 
-  deliveryPoints.push({ name, coords: [lat, lon] });
-  L.marker([lat, lon]).addTo(map).bindPopup(name);
-
-  const li = document.createElement('li');
-  li.textContent = name;
-  document.getElementById('locationList').appendChild(li);
-
-  updateRoute();
-}
-
-function updateRoute() {
-  if (routingControl) {
-    map.removeControl(routingControl);
-  }
-
-  let waypoints = [L.latLng(farmCoords)];
-  deliveryPoints.forEach(loc => waypoints.push(L.latLng(loc.coords)));
-
-  if (waypoints.length <= 1) return;
-
-  routingControl = L.Routing.control({
+  const waypoints = [farmLocation, ...destinations];
+  if (control) map.removeControl(control);
+  control = L.Routing.control({
     waypoints: waypoints,
-    lineOptions: {
-      styles: [{ color: '#28a745', weight: 4 }]
-    },
-    show: false,
-    addWaypoints: false,
-    routeWhileDragging: false,
-    draggableWaypoints: false,
-    fitSelectedRoutes: true,
-    createMarker: () => null
-  })
-  .on('routesfound', function(e) {
-    const route = e.routes[0];
-    const km = (route.summary.totalDistance / 1000).toFixed(2);
-    const cost = (km * 6).toFixed(2); // R6 per km
+    routeWhileDragging: false
+  }).addTo(map);
 
-    document.getElementById('totalDistance').textContent = km;
-    document.getElementById('costEstimate').textContent = cost;
-  })
-  .addTo(map);
+  control.on('routesfound', function(e) {
+    const distance = e.routes[0].summary.totalDistance / 1000;
+    const costPerKm = parseFloat(document.getElementById("rate").value);
+    const totalCost = (distance * costPerKm).toFixed(2);
+    document.getElementById("summary").innerText = `Distance: ${distance.toFixed(2)} km | Cost: R${totalCost}`;
+  });
 }
 
-// Admin toggle
-document.getElementById('adminToggle').addEventListener('change', function() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('hidden', !this.checked);
-});
