@@ -1,61 +1,83 @@
-const map = L.map("map").setView([-23.3591, 30.5014], 10);
+let map = L.map("map").setView([-23.35906, 30.50142], 10);
+let waypoints = [L.latLng(-23.35906, 30.50142)];
+let routingControl;
+let isSatellite = false;
 
-// Tile layer (satellite optional)
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-}).addTo(map);
+// Tile layers
+const normalTiles = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors",
+});
+const satelliteTiles = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "Tiles © Esri" }
+);
 
-// Add geocoder (search bar)
-const geocoder = L.Control.geocoder({
-  defaultMarkGeocode: false
-})
-.on('markgeocode', function(e) {
-  const latlng = e.geocode.center;
+// Load default tiles
+normalTiles.addTo(map);
+
+// Geocoder Search Bar
+L.esri.Geocoding.geosearch().addTo(map)
+  .on("results", function (data) {
+    data.results.forEach((result) => {
+      L.marker(result.latlng).addTo(map);
+      waypoints.push(result.latlng);
+    });
+  });
+
+// Click to add point
+map.on("click", (e) => {
+  const latlng = e.latlng;
+  L.marker(latlng).addTo(map);
   waypoints.push(latlng);
-  updateRoute();
-})
-.addTo(map);
-
-let waypoints = [L.latLng(-23.3591, 30.5014)]; // Farm
-
-let routingControl = null;
-
-map.on("click", function (e) {
-  waypoints.push(e.latlng);
-  updateRoute();
 });
 
-function updateRoute() {
+function toggleSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  sidebar.style.display = sidebar.style.display === "block" ? "none" : "block";
+}
+
+function toggleSatellite() {
+  isSatellite = !isSatellite;
+  map.removeLayer(normalTiles);
+  map.removeLayer(satelliteTiles);
+  if (isSatellite) {
+    satelliteTiles.addTo(map);
+  } else {
+    normalTiles.addTo(map);
+  }
+}
+
+function calculateRoute() {
   if (routingControl) {
     map.removeControl(routingControl);
   }
-
   routingControl = L.Routing.control({
     waypoints: waypoints,
     routeWhileDragging: false,
     show: false,
-    addWaypoints: false,
-    createMarker: function (i, wp) {
-      return L.marker(wp, { draggable: true }).on("dragend", function (e) {
-        waypoints[i] = e.target.getLatLng();
-        updateRoute();
-      });
-    },
-  })
-  .on("routesfound", function (e) {
-    const total = e.routes[0].summary.totalDistance / 1000;
-    document.getElementById("distance").textContent = total.toFixed(2);
-    const rate = parseFloat(document.getElementById("rate").value);
-    document.getElementById("cost").textContent = (rate * total).toFixed(2);
-  })
-  .addTo(map);
+  }).addTo(map);
+
+  routingControl.on("routesfound", function (e) {
+    const route = e.routes[0];
+    const km = (route.summary.totalDistance / 1000).toFixed(2);
+    const rate = parseFloat(document.getElementById("rate").value || "0");
+    document.getElementById("distance").innerText = km;
+    document.getElementById("cost").innerText = (km * rate).toFixed(2);
+  });
 }
 
-window.clearRoute = function () {
-  waypoints = [L.latLng(-23.3591, 30.5014)];
-  updateRoute();
-};
-
-updateRoute();
-
+function clearRoute() {
+  if (routingControl) {
+    map.removeControl(routingControl);
+  }
+  routingControl = null;
+  waypoints = [L.latLng(-23.35906, 30.50142)];
+  map.eachLayer((layer) => {
+    if (layer instanceof L.Marker && !layer._icon.classList.contains('leaflet-control-geocoder-icon')) {
+      map.removeLayer(layer);
+    }
+  });
+  document.getElementById("distance").innerText = "0";
+  document.getElementById("cost").innerText = "0";
+}
 
