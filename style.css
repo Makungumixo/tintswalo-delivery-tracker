@@ -1,13 +1,13 @@
-body, html {
-  margin: 0;
-  padding: 0;
+html, body {
   height: 100%;
+  margin: 0;
   font-family: 'Poppins', sans-serif;
 }
 
 #map {
   height: 100%;
   width: 100%;
+  z-index: 0;
 }
 
 #adminToggle {
@@ -15,12 +15,13 @@ body, html {
   top: 10px;
   right: 10px;
   z-index: 1001;
-  padding: 10px 15px;
-  background-color: #444;
+  background-color: #1f6feb;
   color: white;
   border: none;
+  padding: 10px 16px;
   border-radius: 5px;
   cursor: pointer;
+  font-weight: bold;
 }
 
 #sidebar {
@@ -28,9 +29,9 @@ body, html {
   top: 60px;
   left: 10px;
   width: 260px;
-  padding: 15px;
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
+  padding: 15px;
+  border-radius: 8px;
   z-index: 1000;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
 }
@@ -43,14 +44,14 @@ body, html {
   width: 100%;
   margin: 5px 0;
   padding: 8px;
+  font-size: 14px;
 }
 
 #instructions {
-  margin-top: 10px;
-  max-height: 200px;
+  max-height: 180px;
   overflow-y: auto;
-  font-size: 0.9em;
-  color: #333;
+  font-size: 13px;
 }
+
 
 
