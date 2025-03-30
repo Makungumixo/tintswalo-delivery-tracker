@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo's Poultry Delivery Tracker</title>
+  <title>Delivery Tracker | Tintswalo's Poultry</title>
   <link rel="stylesheet" href="style.css" />
   <link
     rel="stylesheet"
@@ -13,12 +13,16 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"
   />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"
+  />
 </head>
 <body>
   <div id="sidebar">
     <h2>Admin Mode 🐓</h2>
-    <label>Rate/km (R): <input type="number" id="rate" value="5"/></label>
-    <input type="text" id="locationSearch" placeholder="Search for a place..." />
+    <label>Rate/km (R): <input type="number" id="rate" value="5" /></label>
+    <input type="text" id="locationSearch" placeholder="Search location..." />
     <button onclick="clearRoute()">Clear Route</button>
     <p><strong>Total Distance:</strong> <span id="distance">0</span> km</p>
     <p><strong>Estimated Cost:</strong> R<span id="cost">0</span></p>
@@ -32,4 +36,5 @@
   <script src="script.js"></script>
 </body>
 </html>
+
 
