@@ -3,35 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Delivery Tracker</title>
+  <title>Tintswalo’s Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
-  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 </head>
 <body>
-  <div id="sidebar">
-    <h2>Admin Mode</h2>
-    <button onclick="toggleSatellite()">Toggle Satellite View</button>
-    <label for="rate">Rate/km (R):</label>
-    <input type="number" id="rate" value="5" min="1" />
-    <p>Total Distance: <span id="distance">0</span> km</p>
-    <p>Estimated Cost: R<span id="cost">0</span></p>
-    <button onclick="calculateRoute()">Calculate Route</button>
-    <button onclick="clearRoute()">Clear Route</button>
-    <button onclick="toggleSidebar()">Close Sidebar</button>
-  </div>
 
-  <button id="toggle-admin" onclick="toggleSidebar()">☰ Admin</button>
+  <button id="admin-toggle">Admin Mode</button>
+
+  <div id="sidebar" class="hidden">
+    <h2>Delivery Admin</h2>
+    <p>Click on the map or enter delivery addresses:</p>
+    <input type="text" id="addressInput" placeholder="Type address (e.g., Giyani, Limpopo)" />
+    <button onclick="addAddressFromInput()">Add Location</button>
+    <button onclick="calculateRoute()">Calculate Route</button>
+    <button onclick="clearAll()">Clear Route</button>
+    <div id="locationsList"></div>
+  </div>
 
   <div id="map"></div>
 
-  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
-  <script src="https://unpkg.com/esri-leaflet/dist/esri-leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
   <script src="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css" />
   <script src="script.js"></script>
 </body>
 </html>
+
 
