@@ -1,87 +1,187 @@
-const farmCoords = [-23.358, 30.5014]; // Your fixed farm coordinates
-let map = L.map('map').setView(farmCoords, 11);
-
+const farmLatLng = [-23.35906, 30.50142];
+let map = L.map("map").setView(farmLatLng, 10);
 let markers = [];
-let routingControl = null;
+let control = null;
 let isSatellite = false;
-let markerLayer = L.layerGroup().addTo(map);
 
-// Base layers
-const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-  subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+}).addTo(map);
+
+const satellite = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  maxZoom: 17,
 });
 
-streets.addTo(map);
+const farmMarker = L.marker(farmLatLng, { draggable: false }).addTo(map).bindPopup("Tintswalo's Poultry Farm").openPopup();
 
-// Admin toggle
-document.getElementById('adminToggle').addEventListener('click', () => {
-  const panel = document.getElementById('sidebar');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+document.getElementById("adminToggle").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("hidden");
 });
 
-// Satellite toggle
-document.getElementById('satelliteToggle').addEventListener('click', () => {
-  isSatellite = !isSatellite;
+document.getElementById("satelliteToggle").addEventListener("click", () => {
   if (isSatellite) {
-    map.removeLayer(streets);
-    satellite.addTo(map);
-  } else {
     map.removeLayer(satellite);
-    streets.addTo(map);
+    osm.addTo(map);
+  } else {
+    map.removeLayer(osm);
+    satellite.addTo(map);
   }
+  isSatellite = !isSatellite;
 });
 
-// Add marker on map click
-map.on('click', function (e) {
-  const markerNumber = markers.length + 1;
-  const marker = L.marker(e.latlng).bindTooltip(`Stop ${markerNumber}`, {
-    permanent: true,
-    direction: "top"
-  }).addTo(markerLayer);
-  markers.push(e.latlng);
+map.on("click", (e) => {
+  const marker = L.marker(e.latlng).addTo(map);
+  markers.push(marker);
 });
 
-// Calculate optimal route
-document.getElementById('calculateRoute').addEventListener('click', () => {
-  if (markers.length < 1) return;
+document.getElementById("calculateRoute").addEventListener("click", () => {
+  if (control) map.removeControl(control);
+  if (markers.length === 0) return;
 
-  const waypoints = [L.latLng(farmCoords), ...markers];
-  const rate = parseFloat(document.getElementById('rateInput').value || 5);
+  const waypoints = [L.latLng(farmLatLng), ...markers.map(m => m.getLatLng())];
 
-  if (routingControl) map.removeControl(routingControl);
-
-  routingControl = L.Routing.control({
-    waypoints: waypoints,
+  control = L.Routing.control({
+    waypoints,
     routeWhileDragging: false,
     show: false,
-    addWaypoints: false,
-    router: new L.Routing.OSRMv1({
-      serviceUrl: 'https://router.project-osrm.org/route/v1'
+    plan: L.Routing.plan(waypoints, {
+      createMarker: (i, wp) => {
+        return L.marker(wp, {
+          icon: L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background:#1f6feb;color:white;padding:5px;border-radius:50%">${i}</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+          })
+        });
+      },
     }),
-    createMarker: function () { return null; }
+    router: L.Routing.osrmv1({
+      serviceUrl: "https://router.project-osrm.org/route/v1"
+    })
   }).addTo(map);
 
-  routingControl.on('routesfound', function (e) {
+  control.on("routesfound", function (e) {
     const route = e.routes[0];
     const km = (route.summary.totalDistance / 1000).toFixed(2);
+    const rate = parseFloat(document.getElementById("rateInput").value);
     const cost = (rate * km).toFixed(2);
 
-    document.getElementById('distanceOutput').innerText = `Distance: ${km} km`;
-    document.getElementById('costOutput').innerText = `Estimated Cost: R${cost}`;
+    document.getElementById("distanceOutput").innerText = `Distance: ${km} km`;
+    document.getElementById("costOutput").innerText = `Estimated Cost: R${cost}`;
+
+    let directionsHTML = "<h4>Route Instructions:</h4><ol>";
+    route.instructions.forEach(step => {
+      directionsHTML += `<li>${step.text}</li>`;
+    });
+    directionsHTML += "</ol>";
+
+    document.getElementById("instructions").innerHTML = directionsHTML;
   });
 });
 
-// Clear everything
-document.getElementById('clearRoute').addEventListener('click', () => {
-  markerLayer.clearLayers();
-  markers = [];
-  if (routingControl) {
-    map.removeControl(routingControl);
-    routingControl = null;
+document.getElementById("clearRoute").addEventListener("click", () => {
+  if (control) {
+    map.removeControl(control);
+    control = null;
   }
-  document.getElementById('distanceOutput').innerText = '';
-  document.getElementById('costOutput').innerText = '';
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  document.getElementById("distanceOutput").innerText = "";
+  document.getElementById("costOutput").innerText = "";
+  document.getElementById("instructions").innerHTML = "";
+});
+const farmLatLng = [-23.35906, 30.50142];
+let map = L.map("map").setView(farmLatLng, 10);
+let markers = [];
+let control = null;
+let isSatellite = false;
+
+const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+}).addTo(map);
+
+const satellite = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  maxZoom: 17,
 });
 
+const farmMarker = L.marker(farmLatLng, { draggable: false }).addTo(map).bindPopup("Tintswalo's Poultry Farm").openPopup();
 
+document.getElementById("adminToggle").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("hidden");
+});
+
+document.getElementById("satelliteToggle").addEventListener("click", () => {
+  if (isSatellite) {
+    map.removeLayer(satellite);
+    osm.addTo(map);
+  } else {
+    map.removeLayer(osm);
+    satellite.addTo(map);
+  }
+  isSatellite = !isSatellite;
+});
+
+map.on("click", (e) => {
+  const marker = L.marker(e.latlng).addTo(map);
+  markers.push(marker);
+});
+
+document.getElementById("calculateRoute").addEventListener("click", () => {
+  if (control) map.removeControl(control);
+  if (markers.length === 0) return;
+
+  const waypoints = [L.latLng(farmLatLng), ...markers.map(m => m.getLatLng())];
+
+  control = L.Routing.control({
+    waypoints,
+    routeWhileDragging: false,
+    show: false,
+    plan: L.Routing.plan(waypoints, {
+      createMarker: (i, wp) => {
+        return L.marker(wp, {
+          icon: L.divIcon({
+            className: 'custom-div-icon',
+            html: `<div style="background:#1f6feb;color:white;padding:5px;border-radius:50%">${i}</div>`,
+            iconSize: [30, 30],
+            iconAnchor: [15, 15],
+          })
+        });
+      },
+    }),
+    router: L.Routing.osrmv1({
+      serviceUrl: "https://router.project-osrm.org/route/v1"
+    })
+  }).addTo(map);
+
+  control.on("routesfound", function (e) {
+    const route = e.routes[0];
+    const km = (route.summary.totalDistance / 1000).toFixed(2);
+    const rate = parseFloat(document.getElementById("rateInput").value);
+    const cost = (rate * km).toFixed(2);
+
+    document.getElementById("distanceOutput").innerText = `Distance: ${km} km`;
+    document.getElementById("costOutput").innerText = `Estimated Cost: R${cost}`;
+
+    let directionsHTML = "<h4>Route Instructions:</h4><ol>";
+    route.instructions.forEach(step => {
+      directionsHTML += `<li>${step.text}</li>`;
+    });
+    directionsHTML += "</ol>";
+
+    document.getElementById("instructions").innerHTML = directionsHTML;
+  });
+});
+
+document.getElementById("clearRoute").addEventListener("click", () => {
+  if (control) {
+    map.removeControl(control);
+    control = null;
+  }
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  document.getElementById("distanceOutput").innerText = "";
+  document.getElementById("costOutput").innerText = "";
+  document.getElementById("instructions").innerHTML = "";
+});
+V
