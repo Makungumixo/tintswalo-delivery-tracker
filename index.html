@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tintswalo's Poultry Delivery Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"
+  />
+</head>
+<body>
+  <header>
+    <h1>Tintswalo’s Poultry Delivery Tracker</h1>
+    <label class="toggle">
+      <input type="checkbox" id="adminToggle" />
+      <span class="slider"></span> Admin Mode
+    </label>
+  </header>
+
+  <div class="container">
+    <div id="sidebar" class="hidden">
+      <h2>Add Delivery Location</h2>
+      <input type="text" id="locationName" placeholder="Name (e.g. Gandlanani)" />
+      <input type="number" id="latitude" placeholder="Latitude" step="any" />
+      <input type="number" id="longitude" placeholder="Longitude" step="any" />
+      <button onclick="addLocation()">Add Location</button>
+
+      <h3>Delivery Stops:</h3>
+      <ul id="locationList"></ul>
+
+      <div id="summary">
+        <p><strong>Total Distance:</strong> <span id="totalDistance">0</span> km</p>
+        <p><strong>Cost Estimate:</strong> R<span id="costEstimate">0.00</span></p>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
