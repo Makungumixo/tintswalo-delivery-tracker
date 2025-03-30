@@ -1,94 +1,87 @@
-const farmLatLng = L.latLng(-23.358, 30.5014); // Gandlanani Khani
-let map = L.map("map").setView(farmLatLng, 12);
+const farmCoords = [-23.358, 30.5014]; // Your fixed farm coordinates
+let map = L.map('map').setView(farmCoords, 11);
 
-let baseMaps = {
-  "Streets": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-  "Satellite": L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
-    subdomains: ["mt0", "mt1", "mt2", "mt3"],
-  })
-};
-
-baseMaps["Streets"].addTo(map); // default view
-
-L.control.layers(baseMaps).addTo(map);
-
-let sidebar = document.getElementById("sidebar");
-document.getElementById("admin-toggle").onclick = () => {
-  sidebar.classList.toggle("open");
-};
-
-let deliveryPoints = [];
 let markers = [];
 let routingControl = null;
+let isSatellite = false;
+let markerLayer = L.layerGroup().addTo(map);
 
-map.on("click", function (e) {
-  const index = deliveryPoints.length + 1;
-  const label = `Stop ${index}`;
-  L.marker(e.latlng, { title: label })
-    .bindPopup(label)
-    .addTo(map)
-    .openPopup();
-  markers.push(e.latlng);
-  deliveryPoints.push(e.latlng);
+// Base layers
+const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+  subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
 });
 
-function clearRoute() {
-  if (routingControl) map.removeControl(routingControl);
-  deliveryPoints = [];
-  markers = [];
-  document.getElementById("instructions").innerHTML = "";
-  document.getElementById("distanceOutput").innerText = "";
-}
+streets.addTo(map);
 
-function calculateRoute() {
-  if (deliveryPoints.length < 1) return alert("Add at least one stop!");
+// Admin toggle
+document.getElementById('adminToggle').addEventListener('click', () => {
+  const panel = document.getElementById('sidebar');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+});
 
-  let from = farmLatLng;
-  let stops = [...deliveryPoints];
-
-  // Nearest Neighbor Algorithm
-  let route = [from];
-  while (stops.length) {
-    let last = route[route.length - 1];
-    let nearestIndex = 0;
-    let nearestDist = last.distanceTo(stops[0]);
-    for (let i = 1; i < stops.length; i++) {
-      const dist = last.distanceTo(stops[i]);
-      if (dist < nearestDist) {
-        nearestIndex = i;
-        nearestDist = dist;
-      }
-    }
-    route.push(stops.splice(nearestIndex, 1)[0]);
+// Satellite toggle
+document.getElementById('satelliteToggle').addEventListener('click', () => {
+  isSatellite = !isSatellite;
+  if (isSatellite) {
+    map.removeLayer(streets);
+    satellite.addTo(map);
+  } else {
+    map.removeLayer(satellite);
+    streets.addTo(map);
   }
+});
+
+// Add marker on map click
+map.on('click', function (e) {
+  const markerNumber = markers.length + 1;
+  const marker = L.marker(e.latlng).bindTooltip(`Stop ${markerNumber}`, {
+    permanent: true,
+    direction: "top"
+  }).addTo(markerLayer);
+  markers.push(e.latlng);
+});
+
+// Calculate optimal route
+document.getElementById('calculateRoute').addEventListener('click', () => {
+  if (markers.length < 1) return;
+
+  const waypoints = [L.latLng(farmCoords), ...markers];
+  const rate = parseFloat(document.getElementById('rateInput').value || 5);
 
   if (routingControl) map.removeControl(routingControl);
 
   routingControl = L.Routing.control({
-    waypoints: route,
-    lineOptions: {
-      styles: [{ color: "#1f6feb", weight: 4 }]
-    },
+    waypoints: waypoints,
     routeWhileDragging: false,
     show: false,
-    createMarker: (i, wp) => {
-      const label = i === 0 ? "Farm" : `Stop ${i}`;
-      return L.marker(wp.latLng).bindPopup(label);
-    }
+    addWaypoints: false,
+    router: new L.Routing.OSRMv1({
+      serviceUrl: 'https://router.project-osrm.org/route/v1'
+    }),
+    createMarker: function () { return null; }
   }).addTo(map);
 
-  routingControl.on("routesfound", function (e) {
+  routingControl.on('routesfound', function (e) {
     const route = e.routes[0];
-    const totalDistance = route.summary.totalDistance / 1000;
-    const rate = parseFloat(document.getElementById("rateInput").value || 0);
-    const cost = rate * totalDistance;
-    document.getElementById("distanceOutput").innerText =
-      `Distance: ${totalDistance.toFixed(2)} km | Estimated Cost: R${cost.toFixed(2)}`;
+    const km = (route.summary.totalDistance / 1000).toFixed(2);
+    const cost = (rate * km).toFixed(2);
 
-    const waypoints = route.waypoints.map((wp, i) =>
-      i === 0 ? "Start at the Farm" : `Then go to Stop ${i}`
-    );
-    document.getElementById("instructions").innerHTML = waypoints.join("<br>");
+    document.getElementById('distanceOutput').innerText = `Distance: ${km} km`;
+    document.getElementById('costOutput').innerText = `Estimated Cost: R${cost}`;
   });
-}
+});
+
+// Clear everything
+document.getElementById('clearRoute').addEventListener('click', () => {
+  markerLayer.clearLayers();
+  markers = [];
+  if (routingControl) {
+    map.removeControl(routingControl);
+    routingControl = null;
+  }
+  document.getElementById('distanceOutput').innerText = '';
+  document.getElementById('costOutput').innerText = '';
+});
+
 
