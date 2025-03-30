@@ -1,5 +1,7 @@
-let map = L.map("map").setView([-23.35906, 30.50142], 10);
-let waypoints = [L.latLng(-23.35906, 30.50142)];
+const farmCoords = L.latLng(-23.35906, 30.50142); // Your farm
+
+let map = L.map("map").setView(farmCoords, 10);
+let waypoints = [farmCoords];
 let routingControl;
 let isSatellite = false;
 
@@ -16,13 +18,16 @@ const satelliteTiles = L.tileLayer(
 normalTiles.addTo(map);
 
 // Geocoder Search Bar
-L.esri.Geocoding.geosearch().addTo(map)
-  .on("results", function (data) {
-    data.results.forEach((result) => {
-      L.marker(result.latlng).addTo(map);
-      waypoints.push(result.latlng);
-    });
+const searchControl = L.esri.Geocoding.geosearch().addTo(map);
+const results = L.layerGroup().addTo(map);
+
+searchControl.on("results", function (data) {
+  results.clearLayers();
+  data.results.forEach((result) => {
+    L.marker(result.latlng).addTo(results);
+    waypoints.push(result.latlng);
   });
+});
 
 // Click to add point
 map.on("click", (e) => {
@@ -71,7 +76,7 @@ function clearRoute() {
     map.removeControl(routingControl);
   }
   routingControl = null;
-  waypoints = [L.latLng(-23.35906, 30.50142)];
+  waypoints = [farmCoords];
   map.eachLayer((layer) => {
     if (layer instanceof L.Marker && !layer._icon.classList.contains('leaflet-control-geocoder-icon')) {
       map.removeLayer(layer);
@@ -80,4 +85,3 @@ function clearRoute() {
   document.getElementById("distance").innerText = "0";
   document.getElementById("cost").innerText = "0";
 }
-
