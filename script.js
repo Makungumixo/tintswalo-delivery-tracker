@@ -1,84 +1,75 @@
-const farmCoords = L.latLng(-23.358, 30.5014); // Your farm
-const map = L.map('map').setView(farmCoords, 10);
-let markers = [];
-let destinations = [];
-let routingControl;
+const farmLatLng = [-23.35906, 30.50142];
+let waypoints = [];
+let routingControl = null;
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap'
-}).addTo(map);
-
-// Satellite toggle
-const baseLayers = {
-  "Street View": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-  "Satellite View": L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-  })
+const baseMaps = {
+  Standard: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }),
+  Satellite: L.tileLayer(
+    "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: "© Google"
+    }
+  )
 };
-L.control.layers(baseLayers).addTo(map);
 
-// Click map to add locations
-map.on('click', function (e) {
-  addLocation(e.latlng);
+let currentMapType = "Standard";
+let map = L.map("map", {
+  center: farmLatLng,
+  zoom: 11,
+  layers: [baseMaps.Standard]
 });
 
-function addLocation(latlng, label = null) {
-  destinations.push(latlng);
-  const marker = L.marker(latlng).addTo(map);
-  markers.push(marker);
+L.marker(farmLatLng).addTo(map).bindPopup("Tintswalo's Poultry Farm");
 
-  const listItem = document.createElement("li");
-  listItem.textContent = label ? label : `Lat: ${latlng.lat.toFixed(3)}, Lng: ${latlng.lng.toFixed(3)}`;
-  document.getElementById("locationList").appendChild(listItem);
-}
+map.on("click", function (e) {
+  waypoints.push(L.latLng(e.latlng.lat, e.latlng.lng));
+  const li = document.createElement("li");
+  li.textContent = `Stop ${waypoints.length}: (${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)})`;
+  document.getElementById("waypoints-list").appendChild(li);
+});
 
-// Add by typing address
-function addTypedLocation() {
-  const input = document.getElementById("addressInput").value;
-  if (!input) return;
-
-  L.esri.Geocoding.geocode().text(input).run((err, result) => {
-    if (err || result.results.length === 0) {
-      alert("Location not found.");
-      return;
-    }
-    const latlng = result.results[0].latlng;
-    addLocation(latlng, result.results[0].text);
-    document.getElementById("addressInput").value = "";
-  });
-}
-
-// Calculate optimal route from farm to destinations
 function calculateRoute() {
   if (routingControl) map.removeControl(routingControl);
-  if (destinations.length === 0) return;
+  let routePoints = [L.latLng(farmLatLng), ...waypoints];
 
   routingControl = L.Routing.control({
-    waypoints: [farmCoords, ...destinations],
+    waypoints: routePoints,
     routeWhileDragging: false,
-    addWaypoints: false,
-    createMarker: (i, wp) => {
-      return L.marker(wp.latLng).bindPopup(i === 0 ? "Farm" : `Stop ${i}`);
-    }
+    draggableWaypoints: false,
+    addWaypoints: false
   }).addTo(map);
 
-  routingControl.on('routesfound', function (e) {
-    const km = e.routes[0].summary.totalDistance / 1000;
-    const cost = (km * 5).toFixed(2);
-    alert(`Route Distance: ${km.toFixed(2)} km\nEstimated Cost: R${cost}`);
+  routingControl.on("routesfound", function (e) {
+    const routes = e.routes[0];
+    const stepsContainer = document.getElementById("route-steps");
+    stepsContainer.innerHTML = "";
+    for (let i = 0; i < routes.instructions.length; i++) {
+      const li = document.createElement("li");
+      li.innerText = routes.instructions[i].text;
+      stepsContainer.appendChild(li);
+    }
   });
 }
 
-// Clear all routes
 function clearRoute() {
   if (routingControl) map.removeControl(routingControl);
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  destinations = [];
-  document.getElementById("locationList").innerHTML = "";
+  waypoints = [];
+  document.getElementById("waypoints-list").innerHTML = "";
+  document.getElementById("route-steps").innerHTML = "";
 }
 
-// Admin toggle
-document.getElementById("admin-toggle").addEventListener("click", () => {
-  document.getElementById("sidebar").classList.toggle("hidden");
-});
+document.getElementById("admin-toggle").onclick = () => {
+  document.getElementById("sidebar").classList.toggle("collapsed");
+};
+
+document.getElementById("satellite-toggle").onclick = () => {
+  currentMapType =
+    currentMapType === "Standard" ? "Satellite" : "Standard";
+  map.eachLayer(layer => map.removeLayer(layer));
+  baseMaps[currentMapType].addTo(map);
+  if (routingControl) routingControl.addTo(map);
+};
