@@ -3,30 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo’s Poultry Delivery Tracker</title>
+  <title>Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
 </head>
 <body>
 
-  <button id="admin-toggle">Admin Mode</button>
+  <div id="admin-toggle">Admin Mode</div>
 
   <div id="sidebar" class="hidden">
     <h2>Delivery Admin</h2>
-    <p>Click on the map or enter delivery addresses:</p>
-    <input type="text" id="addressInput" placeholder="Type address (e.g., Giyani, Limpopo)" />
-    <button onclick="addAddressFromInput()">Add Location</button>
+    <input type="text" id="addressInput" placeholder="Type a location..." />
+    <button onclick="addTypedLocation()">Add Location</button>
     <button onclick="calculateRoute()">Calculate Route</button>
-    <button onclick="clearAll()">Clear Route</button>
-    <div id="locationsList"></div>
+    <button onclick="clearRoute()">Clear Route</button>
+    <ul id="locationList"></ul>
   </div>
 
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
-  <script src="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.js"></script>
+  <script src="https://unpkg.com/esri-leaflet"></script>
+  <script src="https://unpkg.com/esri-leaflet-geocoder"></script>
   <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder/dist/esri-leaflet-geocoder.css" />
   <script src="script.js"></script>
 </body>
