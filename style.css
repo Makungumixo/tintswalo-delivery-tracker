@@ -62,16 +62,16 @@ body, html {
   font-size: 14px;
 }
 
+/* Place satellite toggle on bottom-left */
 .leaflet-control-layers {
   font-size: 13px;
   background-color: white;
   border-radius: 5px;
 }
 
-/* Ensure satellite toggle shows bottom-left */
-.leaflet-control-layers.leaflet-control {
-  bottom: 10px !important;
-  left: 10px !important;
-  top: auto !important;
-  right: auto !important;
+.leaflet-bottom.leaflet-left {
+  bottom: 10px;
+  left: 10px;
+  top: auto;
+  right: auto;
 }
