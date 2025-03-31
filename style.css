@@ -1,67 +1,31 @@
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: 'Poppins', sans-serif;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chicken Delivery Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+</head>
+<body>
 
-#map {
-  height: 100vh;
-  width: 100vw;
-}
+  <div id="map"></div>
 
-#admin-toggle {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  background-color: #007bff;
-  color: white;
-  padding: 10px;
-  z-index: 1001;
-  border-radius: 5px;
-  font-weight: bold;
-  cursor: pointer;
-}
+  <button id="adminToggle">Admin Mode</button>
 
-#admin-panel {
-  position: fixed;
-  top: 60px;
-  right: 10px;
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 15px;
-  border-radius: 10px;
-  z-index: 1000;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
+  <div id="sidebar" class="hidden">
+    <h2>Admin Panel</h2>
+    <p>Add delivery stops by clicking on the map.</p>
+    <button id="calculateRoute">Calculate Optimal Route</button>
+    <button id="clearRoute">Clear Route</button>
+    <p id="costDisplay"></p>
+  </div>
 
-#admin-panel.hidden {
-  display: none;
-}
-
-#admin-panel button {
-  margin-bottom: 10px;
-  padding: 8px;
-  width: 100%;
-  border: none;
-  background-color: #28a745;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-#cost-display {
-  margin-top: 10px;
-  font-weight: bold;
-}
-
-/* Move base layer toggle to bottom left */
-.leaflet-control-layers {
-  bottom: 10px !important;
-  left: 10px !important;
-  top: auto !important;
-  right: auto !important;
-}
+  <script src="script.js"></script>
+</body>
+</html>
 
 
 
