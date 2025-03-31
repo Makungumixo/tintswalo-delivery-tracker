@@ -3,32 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Chicken Delivery Tracker</title>
+  <title>Tintswalo’s Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"/>
-  <script defer src="script.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Admin Toggle Button -->
-  <button id="adminToggle">Admin Mode</button>
+  <!-- Admin Sidebar Toggle -->
+  <button id="toggle-admin">Admin</button>
 
-  <!-- Admin Sidebar -->
-  <div id="adminPanel">
-    <h2>Admin Panel</h2>
-    <p>Click on the map to add delivery stops.</p>
-    <label for="rateInput">Rate per km (ZAR):</label>
-    <input type="number" id="rateInput" value="4" />
-    <button onclick="calculateRoute()">Calculate Route</button>
-    <button onclick="clearRoute()">Clear Route</button>
-    <div id="results"></div>
+  <!-- Admin Panel -->
+  <div id="admin-sidebar" class="hidden">
+    <h3>Delivery Tracker Admin</h3>
+    <button id="calculate-route">Calculate Route</button>
+    <button id="clear-route">Clear Route</button>
+    <div id="distance"></div>
+    <div id="cost"></div>
   </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
