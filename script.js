@@ -16,22 +16,28 @@ const satelliteToggle = document.getElementById("satellite-toggle");
 
 let isAdding = false;
 
-// Fixed Farm Marker
-L.marker(farmCoords, { title: "Farm", icon: L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-  iconSize: [35, 35],
-  iconAnchor: [17, 34]
-})}).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+// Farm Marker
+L.marker(farmCoords, {
+  title: "Farm",
+  icon: L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+    iconSize: [35, 35],
+    iconAnchor: [17, 34]
+  })
+}).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
 
-// Admin toggle
-adminToggle.onclick = () => sidebar.classList.toggle("hidden");
+// Toggle Admin Sidebar
+adminToggle.onclick = () => {
+  sidebar.classList.toggle("hidden");
+};
 
-// Enable click to add delivery points
+// Enable "Add Location" Mode
 addBtn.onclick = () => {
   isAdding = true;
   alert("Click on the map to add a delivery point.");
 };
 
+// Add Stop Marker
 map.on("click", (e) => {
   if (isAdding) {
     const idx = markers.length + 1;
@@ -48,7 +54,7 @@ map.on("click", (e) => {
   }
 });
 
-// Toggle satellite mode
+// Satellite Toggle
 satelliteToggle.onchange = function () {
   if (this.checked) {
     map.removeLayer(tileLayer);
@@ -59,7 +65,7 @@ satelliteToggle.onchange = function () {
   }
 };
 
-// Calculate optimized delivery route
+// Calculate Optimized Route
 calcBtn.onclick = async () => {
   if (markers.length === 0) {
     alert("Add at least one stop before calculating.");
@@ -126,7 +132,7 @@ calcBtn.onclick = async () => {
   }).addTo(map);
 };
 
-// Clear route + markers
+// Clear All
 clearBtn.onclick = () => {
   markers.forEach(marker => map.removeLayer(marker));
   markers = [];
