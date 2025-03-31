@@ -3,29 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo’s Poultry Delivery Tracker</title>
+  <title>Tintswalo's Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha512-sA+e2WvZ3hdKhmB1L6H+lFeqRckjMkUzw+XnUeWJCK99JZc5VO5POxOjZ8x5UXx3q4EVX5D1J0e47sUmy4x0ug=="
+    crossorigin=""
+  />
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Admin Sidebar Toggle -->
-  <button id="toggle-admin">Admin</button>
+  <button id="toggle-admin">Admin Mode</button>
 
-  <!-- Admin Panel -->
   <div id="admin-sidebar" class="hidden">
-    <h3>Delivery Tracker Admin</h3>
+    <h3>Delivery Controls</h3>
+    <p>Click on the map to add stops.</p>
     <button id="calculate-route">Calculate Route</button>
     <button id="clear-route">Clear Route</button>
-    <div id="distance"></div>
-    <div id="cost"></div>
+    <p id="distance"></p>
+    <p id="cost"></p>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha512-o9N1jF3hDLz7x8XDJ1NDIswlK7sA+so94a+tDR3yMo3AXE8x4PBjsszv4XkFfR8FARj2O9tqn6R64d7szUK1jw=="
+    crossorigin=""></script>
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
