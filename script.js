@@ -19,33 +19,34 @@ L.control.layers({
   "Satellite": satelliteLayer
 }, null, { position: "bottomleft" }).addTo(map);
 
-const blueIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
-  iconSize: [32, 32],
-  iconAnchor: [16, 32]
-});
-
+// Icons
 const redIcon = L.icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-// Add fixed farm marker
+const blueIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+// Fixed farm marker
 L.marker(farmCoord, { icon: redIcon }).addTo(map).bindPopup("Farm");
 
-// Admin toggle
+// Toggle sidebar
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add stop on map click
+// Add stops on map click
 map.on("click", (e) => {
   const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
   stopMarkers.push(marker);
 });
 
-// Clear route & stops
+// Clear all stops and route
 document.getElementById("clear-route").onclick = () => {
   stopMarkers.forEach(m => map.removeLayer(m));
   stopMarkers = [];
@@ -57,17 +58,17 @@ document.getElementById("clear-route").onclick = () => {
   document.getElementById("cost").innerText = "";
 };
 
-// Calculate optimized route
+// Calculate shortest route
 document.getElementById("calculate-route").onclick = async () => {
   if (stopMarkers.length === 0) {
     alert("Add at least one stop.");
     return;
   }
 
-  const waypoints = stopMarkers.map(m => [m.getLatLng().lng, m.getLatLng().lat]);
+  const coords = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+
   const body = {
-    coordinates: [[farmCoord[1], farmCoord[0]], ...waypoints],
-    optimize_waypoints: true
+    coordinates: coords.map(c => [c[1], c[0]]) // [lng, lat] format for ORS
   };
 
   try {
@@ -79,6 +80,8 @@ document.getElementById("calculate-route").onclick = async () => {
       },
       body: JSON.stringify(body)
     });
+
+    if (!res.ok) throw new Error("API error");
 
     const data = await res.json();
     const dist = data.features[0].properties.summary.distance / 1000;
