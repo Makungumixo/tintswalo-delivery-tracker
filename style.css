@@ -28,7 +28,7 @@ html, body {
 
 #toggle-admin {
   position: absolute;
-  bottom: 10px;
+  top: 10px;
   right: 10px;
   z-index: 1001;
   padding: 10px 14px;
