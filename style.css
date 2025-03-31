@@ -1,4 +1,3 @@
-/* Set up map full screen */
 body, html {
   height: 100%;
   margin: 0;
@@ -11,7 +10,6 @@ body, html {
   z-index: 0;
 }
 
-/* Admin Button */
 #toggle-admin {
   position: absolute;
   top: 15px;
@@ -25,14 +23,12 @@ body, html {
   font-weight: bold;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  transition: background-color 0.3s ease;
 }
 
 #toggle-admin:hover {
   background-color: #154db4;
 }
 
-/* Admin Sidebar */
 #admin-sidebar {
   position: absolute;
   top: 70px;
@@ -43,21 +39,13 @@ body, html {
   padding: 20px;
   z-index: 1000;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
-  transition: right 0.3s ease;
 }
 
 #admin-sidebar.hidden {
   display: none;
 }
 
-#admin-sidebar h3 {
-  margin-top: 0;
-  font-size: 18px;
-  color: #1f6feb;
-}
-
 #admin-sidebar button {
-  display: block;
   width: 100%;
   margin-bottom: 10px;
   padding: 10px;
@@ -67,23 +55,23 @@ body, html {
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-#admin-sidebar button:hover {
-  background-color: #154db4;
 }
 
 #admin-sidebar p {
   margin: 8px 0;
   font-size: 14px;
-  color: #333;
 }
 
-/* Override default Leaflet controls */
 .leaflet-control-layers {
   font-size: 13px;
   background-color: white;
   border-radius: 5px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Ensure satellite toggle shows bottom-left */
+.leaflet-control-layers.leaflet-control {
+  bottom: 10px !important;
+  left: 10px !important;
+  top: auto !important;
+  right: auto !important;
 }
