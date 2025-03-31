@@ -6,50 +6,50 @@ let routeLine = null;
 
 const map = L.map("map").setView(farmCoord, 13);
 
-// Tile Layers
-const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+// Map Layers
+const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors"
 }).addTo(map);
 
-const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+const satellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
   attribution: "© Esri"
 });
 
-// Layer Toggle Control
+// Satellite toggle bottom left
 L.control.layers(
-  { "Street": osmLayer, "Satellite": satelliteLayer },
+  { "Street": osm, "Satellite": satellite },
   null,
   { position: "bottomleft" }
 ).addTo(map);
 
 // Icons
-const redIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/1673/1673221.png",
+const farmIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // RED LOCATION PIN
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-const blueIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+const stopIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png", // BLUE LOCATION PIN
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-// Add Farm Marker
-L.marker(farmCoord, { icon: redIcon }).addTo(map).bindPopup("Farm");
+// Fixed Farm Marker
+L.marker(farmCoord, { icon: farmIcon }).addTo(map).bindPopup("Farm");
 
-// Admin Button
+// Admin toggle
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add stop by clicking on map
+// Add stop
 map.on("click", (e) => {
-  const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
+  const marker = L.marker(e.latlng, { icon: stopIcon }).addTo(map);
   stopMarkers.push(marker);
 });
 
-// Clear Route
+// Clear Route & Stops
 document.getElementById("clear-route").onclick = () => {
   stopMarkers.forEach(m => map.removeLayer(m));
   stopMarkers = [];
@@ -64,16 +64,21 @@ document.getElementById("clear-route").onclick = () => {
 
 // Calculate Route
 document.getElementById("calculate-route").onclick = async () => {
-  if (stopMarkers.length < 1) return alert("Add at least one stop.");
+  if (stopMarkers.length < 1) return alert("Add at least one stop");
 
   const rate = parseFloat(document.getElementById("rate").value) || 5;
 
-  const coordinates = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
-  const orsCoords = coordinates.map(c => [c[1], c[0]]); // lng, lat
+  const coords = [
+    farmCoord,
+    ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])
+  ];
+
+  const orsCoords = coords.map(([lat, lng]) => [lng, lat]); // lng, lat
 
   const body = {
     coordinates: orsCoords,
-    instructions: true
+    instructions: true,
+    optimize_waypoints: true
   };
 
   try {
