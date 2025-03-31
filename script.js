@@ -1,148 +1,106 @@
-const farmCoords = [-23.359056, 30.501417]; // Fixed farm location
+const farmCoords = [-23.359056, 30.501417]; // Gandlanani Khani, Giyani
 const apiKey = "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf";
-let markers = [];
-let routeLine;
-let map;
-let satelliteView = false;
 
-// Map Initialization
-window.onload = () => {
-  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap",
-  });
+const map = L.map("map").setView(farmCoords, 13);
 
-  const satellite = L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
-    subdomains: ['mt0','mt1','mt2','mt3'],
-    attribution: "© Google Satellite",
-  });
+// Layers
+const normal = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+const satellite = L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+  subdomains: ["mt0", "mt1", "mt2", "mt3"],
+});
+normal.addTo(map);
 
-  map = L.map("map", {
-    center: farmCoords,
-    zoom: 13,
-    layers: [streets]
-  });
+L.control
+  .layers({ "Street View": normal, "Satellite View": satellite })
+  .addTo(map);
 
-  const farmIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -30],
-  });
+// Farm marker
+const farmMarker = L.marker(farmCoords, { icon: L.icon({ iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", iconSize: [25, 41], iconAnchor: [12, 41] }) })
+  .addTo(map)
+  .bindPopup("Tintswalo’s Poultry Farm")
+  .openPopup();
 
-  // Add fixed farm marker
-  L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+let stopMarkers = [];
+let routingControl = null;
 
-  // Add delivery marker on map click
-  map.on("click", (e) => {
-    const stopNumber = markers.length + 1;
-    const marker = L.marker(e.latlng)
-      .addTo(map)
-      .bindPopup(`Stop ${stopNumber}`)
-      .openPopup();
-    markers.push(marker);
-    calculateOptimizedRoute();
-  });
+map.on("click", function (e) {
+  const marker = L.marker(e.latlng, { icon: L.icon({ iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png", iconSize: [25, 41], iconAnchor: [12, 41] }) })
+    .addTo(map)
+    .bindPopup("Stop " + (stopMarkers.length + 1))
+    .openPopup();
+  stopMarkers.push({ coords: [e.latlng.lat, e.latlng.lng], marker });
+});
 
-  // Clear Route
-  document.getElementById("clearBtn").onclick = () => {
-    if (routeLine) map.removeLayer(routeLine);
-    markers.forEach((m) => map.removeLayer(m));
-    markers = [];
-    document.getElementById("distance").innerText = "";
-    document.getElementById("cost").innerText = "";
-  };
+function calculateOptimizedRoute() {
+  if (stopMarkers.length < 1) {
+    alert("Add at least one stop.");
+    return;
+  }
 
-  // Toggle Admin Panel
-  document.getElementById("toggleAdmin").onclick = () => {
-    document.getElementById("admin-panel").classList.toggle("collapsed");
-  };
-
-  // Toggle Satellite View
-  document.getElementById("toggleView").onclick = () => {
-    if (satelliteView) {
-      map.eachLayer(layer => map.removeLayer(layer));
-      streets.addTo(map);
-      L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
-      markers.forEach(m => m.addTo(map));
-      if (routeLine) routeLine.addTo(map);
-    } else {
-      map.eachLayer(layer => map.removeLayer(layer));
-      satellite.addTo(map);
-      L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
-      markers.forEach(m => m.addTo(map));
-      if (routeLine) routeLine.addTo(map);
-    }
-    satelliteView = !satelliteView;
-  };
-};
-
-// Calculate Optimized Route via OpenRouteService
-async function calculateOptimizedRoute() {
-  if (markers.length < 1) return;
-
-  const locations = [
-    [farmCoords[1], farmCoords[0]], // [lng, lat]
-    ...markers.map((m) => [m.getLatLng().lng, m.getLatLng().lat])
-  ];
+  const locations = [farmCoords, ...stopMarkers.map(s => s.coords)];
 
   const body = {
-    jobs: locations.slice(1).map((loc, i) => ({
+    jobs: stopMarkers.map((stop, i) => ({
       id: i + 1,
-      location: loc
+      location: stop.coords.reverse(), // [lng, lat]
     })),
-    vehicles: [
-      {
-        id: 1,
-        start: locations[0],
-        end: locations[0]
-      }
-    ]
+    vehicles: [{
+      id: 1,
+      profile: "driving-car",
+      start: farmCoords.slice().reverse(),
+    }],
   };
 
-  try {
-    const res = await fetch("https://api.openrouteservice.org/optimization", {
-      method: "POST",
-      headers: {
-        Authorization: apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
+  fetch("https://api.openrouteservice.org/optimization", {
+    method: "POST",
+    headers: {
+      "Authorization": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  })
+    .then(res => res.json())
+    .then(data => {
+      const route = data.routes[0];
+      const steps = route.steps.map(s => s.location.reverse()); // back to [lat, lng]
+      if (routingControl) map.removeControl(routingControl);
+
+      routingControl = L.Routing.control({
+        waypoints: steps.map(p => L.latLng(p)),
+        lineOptions: { styles: [{ color: "blue", weight: 4 }] },
+        createMarker: function (i, wp) {
+          return L.marker(wp.latLng).bindPopup("Stop " + i).openPopup();
+        },
+        addWaypoints: false,
+        routeWhileDragging: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+      }).addTo(map);
+
+      const distanceKm = route.summary.distance / 1000;
+      const rate = parseFloat(document.getElementById("rate").value);
+      const cost = distanceKm * rate;
+      document.getElementById("cost").innerText = `Estimated Cost: R ${cost.toFixed(2)}`;
+    })
+    .catch(err => {
+      alert("Failed to calculate route.");
+      console.error(err);
     });
-
-    const data = await res.json();
-
-    const ordered = [data.routes[0].steps[0].location]; // farm start
-    data.routes[0].steps.slice(1).forEach(step => {
-      ordered.push(step.location);
-    });
-
-    const coordsQuery = ordered.map(p => p.join(",")).join("|");
-    const geoRes = await fetch(
-      `https://api.openrouteservice.org/v2/directions/driving-car/geojson?api_key=${apiKey}&start=${coordsQuery}`
-    );
-
-    const geo = await geoRes.json();
-
-    if (routeLine) map.removeLayer(routeLine);
-    routeLine = L.geoJSON(geo, {
-      style: {
-        color: "blue",
-        weight: 4
-      }
-    }).addTo(map);
-
-    const totalMeters = data.routes[0].distance;
-    const km = (totalMeters / 1000).toFixed(2);
-    const costPerKm = 5; // Change this rate as needed
-    const totalCost = (km * costPerKm).toFixed(2);
-
-    document.getElementById("distance").innerText = `Total Distance: ${km} km`;
-    document.getElementById("cost").innerText = `Estimated Cost: R${totalCost}`;
-
-  } catch (error) {
-    console.error("Route calculation failed:", error);
-    alert("Failed to calculate route.");
-  }
 }
+
+function clearRoute() {
+  if (routingControl) {
+    map.removeControl(routingControl);
+    routingControl = null;
+  }
+  stopMarkers.forEach(s => map.removeLayer(s.marker));
+  stopMarkers = [];
+  document.getElementById("cost").innerText = "";
+}
+
+// Admin Toggle
+document.getElementById("admin-toggle").addEventListener("click", () => {
+  document.getElementById("sidebar").classList.toggle("hidden");
+});
 
 
