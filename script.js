@@ -3,27 +3,22 @@ const farmCoord = [-23.35906, 30.50142];
 let stopMarkers = [];
 let routeLine = null;
 
-// Initialize map
+// Map setup
 const map = L.map("map").setView(farmCoord, 13);
 
-// Add Street and Satellite layers
+// Street & Satellite tile layers
 const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap contributors"
+  attribution: "© OpenStreetMap"
 }).addTo(map);
 
 const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
   attribution: "© Esri"
 });
 
-// Add toggle control at bottom left
-L.control.layers(
-  {
-    "Street View": osmLayer,
-    "Satellite View": satelliteLayer
-  },
-  null,
-  { position: "bottomleft" }
-).addTo(map);
+L.control.layers({
+  "Street View": osmLayer,
+  "Satellite View": satelliteLayer
+}, null, { position: "bottomleft" }).addTo(map);
 
 // Blue location icon
 const blueIcon = L.icon({
@@ -32,15 +27,15 @@ const blueIcon = L.icon({
   iconAnchor: [16, 32]
 });
 
-// Fixed farm marker
+// Add fixed farm marker
 L.marker(farmCoord, { icon: blueIcon }).addTo(map).bindPopup("Farm").openPopup();
 
-// Admin toggle button
+// Admin sidebar toggle
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add stop by clicking on map
+// Add stops by clicking on map
 map.on("click", (e) => {
   const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
   stopMarkers.push(marker);
@@ -48,17 +43,19 @@ map.on("click", (e) => {
 
 // Clear route and markers
 document.getElementById("clear-route").onclick = () => {
-  stopMarkers.forEach(m => map.removeLayer(m));
+  stopMarkers.forEach(marker => map.removeLayer(marker));
   stopMarkers = [];
+
   if (routeLine) {
     map.removeLayer(routeLine);
     routeLine = null;
   }
+
   document.getElementById("distance").innerText = "";
   document.getElementById("cost").innerText = "";
 };
 
-// Calculate optimal route using OpenRouteService
+// Calculate route and cost
 document.getElementById("calculate-route").onclick = async () => {
   if (stopMarkers.length < 1) return alert("Add at least one stop.");
 
@@ -68,7 +65,8 @@ document.getElementById("calculate-route").onclick = async () => {
   ];
 
   const body = {
-    coordinates: coords.map(c => [c[1], c[0]])
+    coordinates: coords.map(c => [c[1], c[0]]),
+    optimize_waypoints: true
   };
 
   try {
@@ -82,8 +80,9 @@ document.getElementById("calculate-route").onclick = async () => {
     });
 
     const data = await res.json();
-    const dist = data.features[0].properties.summary.distance / 1000;
-    const cost = dist * 5;
+
+    const dist = data.features[0].properties.summary.distance / 1000; // in km
+    const cost = dist * 5; // R5/km
 
     if (routeLine) map.removeLayer(routeLine);
     routeLine = L.geoJSON(data.features[0].geometry, {
@@ -91,10 +90,10 @@ document.getElementById("calculate-route").onclick = async () => {
     }).addTo(map);
 
     document.getElementById("distance").innerText = `Distance: ${dist.toFixed(2)} km`;
-    document.getElementById("cost").innerText = `Cost: R${cost.toFixed(2)}`;
+    document.getElementById("cost").innerText = `Estimated Cost: R${cost.toFixed(2)}`;
   } catch (err) {
-    alert("Failed to calculate route.");
     console.error(err);
+    alert("Failed to calculate route.");
   }
 };
 
