@@ -1,35 +1,39 @@
-const map = L.map('map').setView([-23.3591, 30.5014], 10); // Farm location
+const map = L.map('map').setView([-23.3591, 30.5014], 11); // Farm location
 
 // Tile Layers
 const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
+  attribution: '&copy; OpenStreetMap'
 }).addTo(map);
 
 const satellite = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenTopoMap'
 });
 
-L.control.layers({ "Streets": streets, "Satellite": satellite }).addTo(map);
+L.control.layers({
+  "Streets": streets,
+  "Satellite": satellite
+}, null, { position: 'bottomleft' }).addTo(map);
 
-// Add farm marker
+// Add fixed farm marker
 const farmCoords = [-23.3591, 30.5014];
-L.marker(farmCoords, { icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [25, 41], iconAnchor: [12, 41] }) })
-  .addTo(map)
-  .bindPopup("Tintswalo's Poultry Farm")
-  .openPopup();
+const farmMarker = L.marker(farmCoords, {
+  icon: L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+  })
+}).addTo(map).bindPopup("Tintswalo's Poultry Farm").openPopup();
 
 let deliveryPoints = [];
 let markers = [];
-let routeLayer;
+let routeLayer = null;
 
 // Admin toggle
-const adminToggle = document.getElementById('admin-toggle');
-const adminPanel = document.getElementById('admin-panel');
-adminToggle.addEventListener('click', () => {
-  adminPanel.classList.toggle('hidden');
+document.getElementById('admin-toggle').addEventListener('click', () => {
+  document.getElementById('admin-panel').classList.toggle('hidden');
 });
 
-// Add delivery point by clicking map
+// Add point by clicking
 map.on('click', function (e) {
   const marker = L.marker(e.latlng, {
     icon: L.icon({
@@ -42,84 +46,88 @@ map.on('click', function (e) {
   deliveryPoints.push([e.latlng.lng, e.latlng.lat]); // ORS format
 });
 
-// Clear Route button
+// Clear route
 document.getElementById('clear-route').addEventListener('click', () => {
-  markers.forEach(m => map.removeLayer(m));
-  markers = [];
-  deliveryPoints = [];
   if (routeLayer) map.removeLayer(routeLayer);
+  markers.forEach(m => map.removeLayer(m));
+  deliveryPoints = [];
+  markers = [];
   document.getElementById('cost-display').textContent = 'Total Cost: R0.00';
 });
 
-// Calculate Optimal Route
+// Calculate route
 document.getElementById('calculate-route').addEventListener('click', async () => {
   if (deliveryPoints.length < 1) {
-    alert("Add at least one delivery point.");
+    alert("Add at least one stop.");
     return;
   }
 
-  const ORS_API_KEY = '5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf';
+  const API_KEY = '5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf';
 
-  const jobs = deliveryPoints.map((coord, i) => ({
+  const jobs = deliveryPoints.map((coords, i) => ({
     id: i + 1,
-    location: coord
+    location: coords
   }));
 
-  const vehicles = [{
+  const vehicle = {
     id: 1,
-    start: [farmCoords[1], farmCoords[0]], // Note: Reversed to [lon, lat]
-    end: [farmCoords[1], farmCoords[0]]
-  }];
-
-  const body = {
-    jobs,
-    vehicles
+    start: [30.5014, -23.3591],
+    end: [30.5014, -23.3591]
   };
 
-  const res = await fetch('https://api.openrouteservice.org/optimization', {
-    method: 'POST',
-    headers: {
-      'Authorization': ORS_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+  const body = { jobs, vehicles: [vehicle] };
 
-  const data = await res.json();
+  try {
+    const res = await fetch('https://api.openrouteservice.org/optimization', {
+      method: 'POST',
+      headers: {
+        'Authorization': API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (!data.routes || data.routes.length === 0) {
-    alert("Failed to calculate route.");
-    return;
+    const data = await res.json();
+
+    if (!data.routes || data.routes.length === 0) {
+      alert("Failed to calculate route.");
+      return;
+    }
+
+    const steps = data.routes[0].steps;
+    const orderedCoords = [
+      vehicle.start,
+      ...steps.map(s => s.location),
+      vehicle.end
+    ];
+
+    // Fetch route geometry
+    const routeRes = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
+      method: 'POST',
+      headers: {
+        'Authorization': API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ coordinates: orderedCoords })
+    });
+
+    const geoData = await routeRes.json();
+
+    if (routeLayer) map.removeLayer(routeLayer);
+    routeLayer = L.geoJSON(geoData, {
+      style: { color: '#007bff', weight: 5 }
+    }).addTo(map);
+
+    // Calculate cost
+    const totalDistance = data.routes[0].distance / 1000; // in km
+    const cost = totalDistance * 5; // R5/km
+    document.getElementById('cost-display').textContent =
+      `Total Distance: ${totalDistance.toFixed(2)} km | Cost: R${cost.toFixed(2)}`;
+
+  } catch (error) {
+    console.error(error);
+    alert("An error occurred while calculating the route.");
   }
-
-  const steps = data.routes[0].steps;
-  const orderedCoords = [vehicles[0].start, ...steps.map(s => s.location), vehicles[0].end];
-
-  if (routeLayer) map.removeLayer(routeLayer);
-
-  // Calculate and display polyline route
-  const routeRes = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
-    method: 'POST',
-    headers: {
-      'Authorization': ORS_API_KEY,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      coordinates: orderedCoords
-    })
-  });
-
-  const routeGeoJSON = await routeRes.json();
-
-  routeLayer = L.geoJSON(routeGeoJSON, {
-    style: { color: '#007bff', weight: 5 }
-  }).addTo(map);
-
-  // Calculate and display cost
-  const totalDistance = data.routes[0].distance / 1000; // in km
-  const cost = totalDistance * 5; // Example R5/km rate
-  document.getElementById('cost-display').textContent = `Total Distance: ${totalDistance.toFixed(2)} km | Cost: R${cost.toFixed(2)}`;
 });
-
 
 
