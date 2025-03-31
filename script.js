@@ -1,5 +1,6 @@
 const apiKey = "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf";
 const farmCoord = [-23.35906, 30.50142];
+
 let stopMarkers = [];
 let routeLine = null;
 
@@ -16,35 +17,35 @@ const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/
 L.control.layers({
   "Street": osmLayer,
   "Satellite": satelliteLayer
-}, null, {
-  position: "bottomleft"
-}).addTo(map);
+}, null, { position: "bottomleft" }).addTo(map);
 
-// Blue location icon
 const blueIcon = L.icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-// Add fixed farm marker
-L.marker(farmCoord, { icon: blueIcon })
-  .addTo(map)
-  .bindPopup("Farm")
-  .openPopup();
+const redIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
 
-// Toggle sidebar
+// Add fixed farm marker
+L.marker(farmCoord, { icon: redIcon }).addTo(map).bindPopup("Farm");
+
+// Admin toggle
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add marker on click
+// Add stop on map click
 map.on("click", (e) => {
   const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
   stopMarkers.push(marker);
 });
 
-// Clear all
+// Clear route & stops
 document.getElementById("clear-route").onclick = () => {
   stopMarkers.forEach(m => map.removeLayer(m));
   stopMarkers = [];
@@ -56,50 +57,40 @@ document.getElementById("clear-route").onclick = () => {
   document.getElementById("cost").innerText = "";
 };
 
-// Calculate shortest optimized route
+// Calculate optimized route
 document.getElementById("calculate-route").onclick = async () => {
-  if (stopMarkers.length < 1) return alert("Add at least one stop.");
+  if (stopMarkers.length === 0) {
+    alert("Add at least one stop.");
+    return;
+  }
 
-  const coordinates = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  const waypoints = stopMarkers.map(m => [m.getLatLng().lng, m.getLatLng().lat]);
+  const body = {
+    coordinates: [[farmCoord[1], farmCoord[0]], ...waypoints],
+    optimize_waypoints: true
+  };
 
   try {
-    const res = await fetch("https://api.openrouteservice.org/optimization", {
+    const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson", {
       method: "POST",
       headers: {
         "Authorization": apiKey,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        jobs: coordinates.slice(1).map((coord, i) => ({
-          id: i + 1,
-          location: [coord[1], coord[0]]
-        })),
-        vehicles: [{
-          id: 1,
-          start: [farmCoord[1], farmCoord[0]],
-          end: [coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]]
-        }]
-      })
+      body: JSON.stringify(body)
     });
 
-    const result = await res.json();
-    const ordered = result.routes[0].steps.map(s => s.location);
+    const data = await res.json();
+    const dist = data.features[0].properties.summary.distance / 1000;
+    const cost = dist * 5;
 
     if (routeLine) map.removeLayer(routeLine);
-
-    const routeCoords = ordered.map(([lng, lat]) => [lat, lng]);
-
-    routeLine = L.polyline(routeCoords, {
-      color: "#1f6feb",
-      weight: 5
+    routeLine = L.geoJSON(data.features[0].geometry, {
+      style: { color: "#1f6feb", weight: 5 }
     }).addTo(map);
 
-    const distance = result.routes[0].distance / 1000;
-    const cost = distance * 5;
-
-    document.getElementById("distance").innerText = `Distance: ${distance.toFixed(2)} km`;
+    document.getElementById("distance").innerText = `Distance: ${dist.toFixed(2)} km`;
     document.getElementById("cost").innerText = `Cost: R${cost.toFixed(2)}`;
-
   } catch (err) {
     alert("Failed to calculate route.");
     console.error(err);
