@@ -3,34 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo’s Poultry Delivery Tracker</title>
+  <title>Tintswalo's Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha384-o9N1jApZ8tcQG4Q1OaVv5y4Av1fI7pVu2WwnRkR6WUzR4La0lJqZ2CevEmkVp/0F"
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha384-JFyrZjkaGwHBRQ7gyRwM8Q1nXwhCgdlzIY0i7TfgRcjKL9JpYpVRf3iMVkL06Hja"
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 </head>
 <body>
-
+  <div id="admin-toggle">Admin Mode</div>
   <div id="map"></div>
 
-  <!-- Admin Mode Toggle -->
-  <button id="admin-toggle">Admin Mode</button>
-
-  <!-- Sidebar -->
-  <div id="sidebar" class="collapsed">
-    <h2>Admin Mode</h2>
-    <p>Click on map to add delivery stops</p>
-    <label for="rate">Rate per km (ZAR):</label>
-    <input type="number" id="rate" value="5" min="1"/>
-
-    <button onclick="calculateRoute()">Calculate Route</button>
-    <button onclick="clearRoute()">Clear Route</button>
-    <div id="cost-display"></div>
-  </div>
-
-  <!-- Satellite Toggle -->
-  <div id="satellite-toggle">
-    <input type="checkbox" id="toggle-sat"/>
-    <label for="toggle-sat">Satellite View</label>
+  <div id="admin-panel" class="hidden">
+    <button id="clear-route">Clear Route</button>
+    <button id="calculate-route">Calculate Optimal Route</button>
+    <div id="cost-display">Total Cost: R0.00</div>
   </div>
 
   <script src="script.js"></script>
