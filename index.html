@@ -3,26 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo's Poultry Delivery Tracker</title>
+  <title>Chicken Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Leaflet & Geocoder -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 </head>
 <body>
-  <div id="admin-toggle">Admin Mode</div>
+
   <div id="map"></div>
 
-  <div id="admin-panel" class="hidden">
-    <button id="clear-route">Clear Route</button>
-    <button id="calculate-route">Calculate Optimal Route</button>
-    <div id="cost-display">Total Cost: R0.00</div>
+  <button id="adminToggle">Admin Mode</button>
+
+  <div id="sidebar" class="hidden">
+    <h2>Admin Panel</h2>
+    <p>Add delivery stops by clicking on the map.</p>
+    <button id="calculateRoute">Calculate Optimal Route</button>
+    <button id="clearRoute">Clear Route</button>
+    <p id="costDisplay"></p>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
