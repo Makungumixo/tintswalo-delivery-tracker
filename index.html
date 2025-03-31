@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo’s Poultry Delivery Tracker</title>
+  <title>Delivery Route Optimizer</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
 </head>
 <body>
   <div id="map"></div>
-
-  <!-- Admin Sidebar -->
-  <div class="admin-sidebar hidden" id="admin-sidebar">
+  <button id="toggle-admin">Admin Mode</button>
+  <div id="admin-sidebar" class="hidden">
     <h2>Admin Panel</h2>
     <button id="calculate-route">Calculate Route</button>
     <button id="clear-route">Clear Route</button>
@@ -20,12 +18,7 @@
     <p id="cost"></p>
   </div>
 
-  <!-- Admin Toggle Button -->
-  <button id="toggle-admin">Admin Mode</button>
-
-  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
