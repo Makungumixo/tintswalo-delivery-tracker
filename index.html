@@ -3,27 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo Delivery Tracker</title>
+  <title>Tintswalo’s Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 </head>
 <body>
-  <button id="adminToggle">Admin Mode</button>
   <div id="map"></div>
 
+  <!-- Admin Panel -->
+  <button id="admin-toggle">Admin Mode</button>
   <div id="sidebar" class="hidden">
-    <h2>Delivery Controls</h2>
-    <label>Rate per kilometer (R):</label>
-    <input type="number" id="rate" value="5" />
-    <button id="calculateRoute">Calculate Route</button>
-    <button id="clearRoute">Clear Route</button>
-    <button id="toggleSatellite">Toggle Satellite View</button>
-    <div id="routeDetails"></div>
+    <h2>Admin Controls</h2>
+    <button id="add-location">Add Location</button>
+    <button id="calculate-route">Calculate Route</button>
+    <button id="clear-route">Clear Route</button>
+    <label class="toggle">
+      <input type="checkbox" id="satellite-toggle" />
+      <span>Satellite View</span>
+    </label>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="https://unpkg.com/leaflet-providers/leaflet-providers.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
+
