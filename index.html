@@ -3,37 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Tintswalo’s Poultry Delivery Tracker</title>
+  <title>Chicken Delivery Optimizer</title>
   <link rel="stylesheet" href="style.css" />
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+    integrity="sha384-sA+z0ZmS2tQe+bGOXh8B7x+dOfN6yCkEfIayr2+4el1gkLZ4ZOSdxIoZ0bKXr3AS"
+    crossorigin=""
   />
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
 </head>
 <body>
   <div id="map"></div>
 
-  <!-- Satellite Toggle -->
-  <div class="map-toggle" id="satellite-toggle">🛰 Satellite</div>
+  <div id="admin-sidebar">
+    <h2>Admin Panel</h2>
+    <p>Click on the map to add stops</p>
+    <button id="calculateRouteBtn">Calculate Optimized Route</button>
+    <button id="clearRouteBtn">Clear Route</button>
+    <p id="distanceOutput"></p>
+    <p id="costOutput"></p>
+  </div>
 
-  <!-- Admin Mode Toggle -->
-  <div id="admin-toggle">🛠 Admin Mode</div>
-
-  <!-- Admin Panel -->
-  <div id="admin-panel">
-    <h3>Admin Panel</h3>
-    <button id="calculate-route">Calculate Optimal Route</button>
-    <button id="clear-route">Clear Route</button>
-    <p id="cost-display">Cost: R0.00</p>
+  <button id="adminToggle">☰ Admin</button>
+  <div class="leaflet-bottom leaflet-left">
+    <div class="leaflet-control-layers leaflet-control">
+      <label><input type="checkbox" id="toggle-satellite" /> Satellite View</label>
+    </div>
   </div>
 
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
