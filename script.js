@@ -1,133 +1,144 @@
-const map = L.map('map').setView([-23.3591, 30.5014], 11); // Farm location
+const farmCoords = [-23.35906, 30.50142]; // Gandlanani Khani Farm Coordinates
+let stops = [];
+let markers = [];
+let routeControl = null;
+let adminMode = false;
+let costPerKm = 5; // You can adjust this rate
+
+// Initialize Map
+const map = L.map("map").setView(farmCoords, 11);
 
 // Tile Layers
-const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap'
+const streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap contributors"
 }).addTo(map);
 
-const satellite = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenTopoMap'
-});
+const satelliteLayer = L.tileLayer(
+  "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+  {
+    maxZoom: 20,
+    subdomains: ["mt0", "mt1", "mt2", "mt3"]
+  }
+);
 
-L.control.layers({
-  "Streets": streets,
-  "Satellite": satellite
-}, null, { position: 'bottomleft' }).addTo(map);
+const baseMaps = {
+  "Street View": streetLayer,
+  "Satellite View": satelliteLayer
+};
+L.control.layers(baseMaps).addTo(map);
 
 // Add fixed farm marker
-const farmCoords = [-23.3591, 30.5014];
-const farmMarker = L.marker(farmCoords, {
-  icon: L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41]
-  })
-}).addTo(map).bindPopup("Tintswalo's Poultry Farm").openPopup();
+L.marker(farmCoords, { title: "Farm" })
+  .addTo(map)
+  .bindPopup("🐔 Tintswalo's Poultry Farm")
+  .openPopup();
 
-let deliveryPoints = [];
-let markers = [];
-let routeLayer = null;
-
-// Admin toggle
-document.getElementById('admin-toggle').addEventListener('click', () => {
-  document.getElementById('admin-panel').classList.toggle('hidden');
+// Admin Mode toggle
+document.getElementById("adminToggle").addEventListener("click", () => {
+  adminMode = !adminMode;
+  document.getElementById("sidebar").classList.toggle("hidden", !adminMode);
 });
 
-// Add point by clicking
-map.on('click', function (e) {
+// Add stops on map click
+map.on("click", function (e) {
+  if (!adminMode) return;
+
   const marker = L.marker(e.latlng, {
     icon: L.icon({
-      iconUrl: 'https://cdn-icons-png.flaticon.com/512/252/252025.png',
+      iconUrl: "https://cdn-icons-png.flaticon.com/512/447/447031.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41]
     })
   }).addTo(map);
   markers.push(marker);
-  deliveryPoints.push([e.latlng.lng, e.latlng.lat]); // ORS format
+  stops.push([e.latlng.lng, e.latlng.lat]); // ORS needs [lng, lat]
 });
 
-// Clear route
-document.getElementById('clear-route').addEventListener('click', () => {
-  if (routeLayer) map.removeLayer(routeLayer);
-  markers.forEach(m => map.removeLayer(m));
-  deliveryPoints = [];
-  markers = [];
-  document.getElementById('cost-display').textContent = 'Total Cost: R0.00';
-});
-
-// Calculate route
-document.getElementById('calculate-route').addEventListener('click', async () => {
-  if (deliveryPoints.length < 1) {
-    alert("Add at least one stop.");
+// Calculate Route
+document.getElementById("calculateRoute").addEventListener("click", async () => {
+  if (stops.length < 1) {
+    alert("Add at least one delivery location.");
     return;
   }
 
-  const API_KEY = '5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf';
+  const coords = [[farmCoords[1], farmCoords[0]], ...stops.map(p => [p[1], p[0]])];
 
-  const jobs = deliveryPoints.map((coords, i) => ({
-    id: i + 1,
-    location: coords
-  }));
-
-  const vehicle = {
-    id: 1,
-    start: [30.5014, -23.3591],
-    end: [30.5014, -23.3591]
+  const body = {
+    jobs: coords.slice(1).map((coord, index) => ({
+      id: index + 1,
+      location: coord
+    })),
+    vehicles: [
+      {
+        id: 1,
+        start: coords[0],
+        end: coords[0]
+      }
+    ]
   };
 
-  const body = { jobs, vehicles: [vehicle] };
+  const res = await fetch("https://api.openrouteservice.org/optimization", {
+    method: "POST",
+    headers: {
+      Authorization: "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
 
-  try {
-    const res = await fetch('https://api.openrouteservice.org/optimization', {
-      method: 'POST',
-      headers: {
-        'Authorization': API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
+  const data = await res.json();
 
-    const data = await res.json();
-
-    if (!data.routes || data.routes.length === 0) {
-      alert("Failed to calculate route.");
-      return;
-    }
-
-    const steps = data.routes[0].steps;
-    const orderedCoords = [
-      vehicle.start,
-      ...steps.map(s => s.location),
-      vehicle.end
-    ];
-
-    // Fetch route geometry
-    const routeRes = await fetch('https://api.openrouteservice.org/v2/directions/driving-car/geojson', {
-      method: 'POST',
-      headers: {
-        'Authorization': API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ coordinates: orderedCoords })
-    });
-
-    const geoData = await routeRes.json();
-
-    if (routeLayer) map.removeLayer(routeLayer);
-    routeLayer = L.geoJSON(geoData, {
-      style: { color: '#007bff', weight: 5 }
-    }).addTo(map);
-
-    // Calculate cost
-    const totalDistance = data.routes[0].distance / 1000; // in km
-    const cost = totalDistance * 5; // R5/km
-    document.getElementById('cost-display').textContent =
-      `Total Distance: ${totalDistance.toFixed(2)} km | Cost: R${cost.toFixed(2)}`;
-
-  } catch (error) {
-    console.error(error);
-    alert("An error occurred while calculating the route.");
+  if (!data.routes) {
+    alert("Failed to calculate route.");
+    return;
   }
+
+  const ordered = data.routes[0].steps.map(step => {
+    if (step.type === "job") {
+      const loc = body.jobs.find(j => j.id === step.id).location;
+      return [loc[1], loc[0]];
+    }
+    return [farmCoords[0], farmCoords[1]];
+  });
+
+  if (routeControl) {
+    map.removeControl(routeControl);
+  }
+
+  routeControl = L.Routing.control({
+    waypoints: ordered.map(c => L.latLng(c[0], c[1])),
+    createMarker: function (i, wp, n) {
+      return L.marker(wp.latLng, {
+        icon: L.divIcon({
+          className: "custom-icon",
+          html: `<div style="background:#007bff;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;">${i}</div>`,
+          iconSize: [30, 30]
+        })
+      });
+    },
+    addWaypoints: false,
+    routeWhileDragging: false,
+    draggableWaypoints: false
+  }).addTo(map);
+
+  // Cost Estimate
+  const distKm = data.routes[0].distance / 1000;
+  const cost = (distKm * costPerKm).toFixed(2);
+  document.getElementById("costDisplay").innerText = `Estimated Distance: ${distKm.toFixed(1)} km | Delivery Cost: R${cost}`;
+});
+
+// Clear Route
+document.getElementById("clearRoute").addEventListener("click", () => {
+  stops = [];
+  markers.forEach(marker => map.removeLayer(marker));
+  markers = [];
+
+  if (routeControl) {
+    map.removeControl(routeControl);
+    routeControl = null;
+  }
+
+  document.getElementById("costDisplay").innerText = "";
 });
 
 
