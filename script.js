@@ -1,144 +1,148 @@
-const farmCoords = [-23.359055, 30.501417]; // Tintswalo’s Poultry Farm
-
-let map = L.map("map").setView(farmCoords, 12);
-let tileLayer = L.tileLayer.provider("OpenStreetMap.Mapnik").addTo(map);
-let satelliteTile = L.tileLayer.provider("Esri.WorldImagery");
-
+const farmCoords = [-23.359056, 30.501417]; // Fixed farm location
+const apiKey = "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf";
 let markers = [];
-let routingControl = null;
+let routeLine;
+let map;
+let satelliteView = false;
 
-const adminToggle = document.getElementById("admin-toggle");
-const sidebar = document.getElementById("sidebar");
-const addBtn = document.getElementById("add-location");
-const calcBtn = document.getElementById("calculate-route");
-const clearBtn = document.getElementById("clear-route");
-const satelliteToggle = document.getElementById("satellite-toggle");
-
-let isAdding = false;
-
-// Farm Marker
-L.marker(farmCoords, {
-  title: "Farm",
-  icon: L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-    iconSize: [35, 35],
-    iconAnchor: [17, 34]
-  })
-}).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
-
-// Toggle Admin Sidebar
-adminToggle.onclick = () => {
-  sidebar.classList.toggle("hidden");
-};
-
-// Enable "Add Location" Mode
-addBtn.onclick = () => {
-  isAdding = true;
-  alert("Click on the map to add a delivery point.");
-};
-
-// Add Stop Marker
-map.on("click", (e) => {
-  if (isAdding) {
-    const idx = markers.length + 1;
-    const marker = L.marker(e.latlng, {
-      title: `Stop ${idx}`,
-      icon: L.divIcon({
-        className: "custom-marker",
-        html: `<div class="stop-icon">${idx}</div>`,
-        iconSize: [30, 30]
-      })
-    }).addTo(map).bindPopup(`Stop ${idx}`);
-    markers.push(marker);
-    isAdding = false;
-  }
-});
-
-// Satellite Toggle
-satelliteToggle.onchange = function () {
-  if (this.checked) {
-    map.removeLayer(tileLayer);
-    satelliteTile.addTo(map);
-  } else {
-    map.removeLayer(satelliteTile);
-    tileLayer.addTo(map);
-  }
-};
-
-// Calculate Optimized Route
-calcBtn.onclick = async () => {
-  if (markers.length === 0) {
-    alert("Add at least one stop before calculating.");
-    return;
-  }
-
-  const allCoords = [farmCoords, ...markers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
-  const jobs = markers.map((m, i) => ({
-    id: i + 1,
-    location: [m.getLatLng().lng, m.getLatLng().lat],
-  }));
-
-  const body = {
-    jobs,
-    vehicles: [{
-      id: 1,
-      start: [farmCoords[1], farmCoords[0]],
-      end: [farmCoords[1], farmCoords[0]]
-    }]
-  };
-
-  const response = await fetch("https://api.openrouteservice.org/optimization", {
-    method: "POST",
-    headers: {
-      "Authorization": "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
+// Map Initialization
+window.onload = () => {
+  const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap",
   });
 
-  const data = await response.json();
-  const steps = data.routes[0].steps;
+  const satellite = L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+    subdomains: ['mt0','mt1','mt2','mt3'],
+    attribution: "© Google Satellite",
+  });
 
-  const waypoints = [
-    farmCoords,
-    ...steps.map(s => {
-      const job = jobs.find(j => j.id === s.job);
-      return [job.location[1], job.location[0]];
-    }),
-    farmCoords
+  map = L.map("map", {
+    center: farmCoords,
+    zoom: 13,
+    layers: [streets]
+  });
+
+  const farmIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -30],
+  });
+
+  // Add fixed farm marker
+  L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+
+  // Add delivery marker on map click
+  map.on("click", (e) => {
+    const stopNumber = markers.length + 1;
+    const marker = L.marker(e.latlng)
+      .addTo(map)
+      .bindPopup(`Stop ${stopNumber}`)
+      .openPopup();
+    markers.push(marker);
+    calculateOptimizedRoute();
+  });
+
+  // Clear Route
+  document.getElementById("clearBtn").onclick = () => {
+    if (routeLine) map.removeLayer(routeLine);
+    markers.forEach((m) => map.removeLayer(m));
+    markers = [];
+    document.getElementById("distance").innerText = "";
+    document.getElementById("cost").innerText = "";
+  };
+
+  // Toggle Admin Panel
+  document.getElementById("toggleAdmin").onclick = () => {
+    document.getElementById("admin-panel").classList.toggle("collapsed");
+  };
+
+  // Toggle Satellite View
+  document.getElementById("toggleView").onclick = () => {
+    if (satelliteView) {
+      map.eachLayer(layer => map.removeLayer(layer));
+      streets.addTo(map);
+      L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+      markers.forEach(m => m.addTo(map));
+      if (routeLine) routeLine.addTo(map);
+    } else {
+      map.eachLayer(layer => map.removeLayer(layer));
+      satellite.addTo(map);
+      L.marker(farmCoords, { icon: farmIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+      markers.forEach(m => m.addTo(map));
+      if (routeLine) routeLine.addTo(map);
+    }
+    satelliteView = !satelliteView;
+  };
+};
+
+// Calculate Optimized Route via OpenRouteService
+async function calculateOptimizedRoute() {
+  if (markers.length < 1) return;
+
+  const locations = [
+    [farmCoords[1], farmCoords[0]], // [lng, lat]
+    ...markers.map((m) => [m.getLatLng().lng, m.getLatLng().lat])
   ];
 
-  if (routingControl) map.removeControl(routingControl);
-
-  routingControl = L.Routing.control({
-    waypoints: waypoints.map(([lat, lng]) => L.latLng(lat, lng)),
-    createMarker: function (i, wp) {
-      if (i === 0) {
-        return L.marker(wp.latLng).bindPopup("Start: Farm");
-      } else if (i === waypoints.length - 1) {
-        return L.marker(wp.latLng).bindPopup("Return to Farm");
-      } else {
-        return L.marker(wp.latLng, {
-          icon: L.divIcon({
-            className: "custom-marker",
-            html: `<div class="stop-icon">${i}</div>`,
-            iconSize: [30, 30]
-          })
-        }).bindPopup(`Stop ${i}`);
+  const body = {
+    jobs: locations.slice(1).map((loc, i) => ({
+      id: i + 1,
+      location: loc
+    })),
+    vehicles: [
+      {
+        id: 1,
+        start: locations[0],
+        end: locations[0]
       }
-    },
-    routeWhileDragging: false,
-    show: true
-  }).addTo(map);
-};
+    ]
+  };
 
-// Clear All
-clearBtn.onclick = () => {
-  markers.forEach(marker => map.removeLayer(marker));
-  markers = [];
-  if (routingControl) {
-    map.removeControl(routingControl);
-    routingControl = null;
+  try {
+    const res = await fetch("https://api.openrouteservice.org/optimization", {
+      method: "POST",
+      headers: {
+        Authorization: apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    const ordered = [data.routes[0].steps[0].location]; // farm start
+    data.routes[0].steps.slice(1).forEach(step => {
+      ordered.push(step.location);
+    });
+
+    const coordsQuery = ordered.map(p => p.join(",")).join("|");
+    const geoRes = await fetch(
+      `https://api.openrouteservice.org/v2/directions/driving-car/geojson?api_key=${apiKey}&start=${coordsQuery}`
+    );
+
+    const geo = await geoRes.json();
+
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.geoJSON(geo, {
+      style: {
+        color: "blue",
+        weight: 4
+      }
+    }).addTo(map);
+
+    const totalMeters = data.routes[0].distance;
+    const km = (totalMeters / 1000).toFixed(2);
+    const costPerKm = 5; // Change this rate as needed
+    const totalCost = (km * costPerKm).toFixed(2);
+
+    document.getElementById("distance").innerText = `Total Distance: ${km} km`;
+    document.getElementById("cost").innerText = `Estimated Cost: R${totalCost}`;
+
+  } catch (error) {
+    console.error("Route calculation failed:", error);
+    alert("Failed to calculate route.");
   }
-};
+}
+
 
