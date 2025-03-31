@@ -7,7 +7,6 @@ body, html {
 #map {
   height: 100%;
   width: 100%;
-  z-index: 0;
 }
 
 #toggle-admin {
@@ -22,21 +21,16 @@ body, html {
   padding: 10px 16px;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-#toggle-admin:hover {
-  background-color: #154db4;
 }
 
 #admin-sidebar {
   position: absolute;
   top: 70px;
   right: 20px;
-  width: 220px;
+  width: 250px;
   background-color: rgba(255, 255, 255, 0.95);
   border-radius: 10px;
-  padding: 20px;
+  padding: 15px;
   z-index: 1000;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.2);
 }
@@ -59,19 +53,18 @@ body, html {
 
 #admin-sidebar p {
   margin: 8px 0;
-  font-size: 14px;
 }
 
-/* Place satellite toggle on bottom-left */
-.leaflet-control-layers {
-  font-size: 13px;
-  background-color: white;
-  border-radius: 5px;
+#instructions {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 5px;
+  border-top: 1px solid #ccc;
 }
 
 .leaflet-bottom.leaflet-left {
   bottom: 10px;
   left: 10px;
-  top: auto;
-  right: auto;
 }
