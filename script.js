@@ -1,82 +1,90 @@
-const farmCoord = [-23.35906, 30.50142]; // Farm: 23°21'32.6"S 30°30'05.1"E
-const apiKey = '5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf';
+const farmCoord = [-23.35906, 30.50142]; // Gandlanani Khani
+const apiKey = "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf";
+const deliveryStops = [];
+let routingControl = null;
 
-let map = L.map("map").setView(farmCoord, 13);
-let markers = [];
-let control = null;
+// Setup map
+const map = L.map("map").setView(farmCoord, 13);
 
-// Satellite toggle
-const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap"
+// Base layers
+const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap",
 }).addTo(map);
 
-const satellite = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    attribution: "© Esri Satellite",
-  }
-);
-
-L.control.layers(
-  { "OpenStreetMap": osm, "Satellite": satellite }
-).addTo(map);
-
-// Fixed farm marker
-L.marker(farmCoord, { icon: L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [30, 30] }) })
-  .addTo(map)
-  .bindPopup("Farm Location")
-  .openPopup();
-
-map.on("click", (e) => {
-  const stopNumber = markers.length + 1;
-  const marker = L.marker(e.latlng, {
-    icon: L.divIcon({
-      className: "custom-marker",
-      html: `<div style="background:#1f6feb;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">${stopNumber}</div>`,
-      iconSize: [24, 24],
-    }),
-  }).addTo(map);
-  markers.push(e.latlng);
+const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+  attribution: "&copy; Esri Satellite",
 });
 
-// Admin toggle
+// Layer control (bottom left)
+L.control.layers(
+  { "OpenStreetMap": osmLayer, "Satellite": satelliteLayer },
+  null,
+  { position: "bottomleft" }
+).addTo(map);
+
+// Fixed Farm Marker
+L.marker(farmCoord, {
+  icon: L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+  })
+}).addTo(map).bindPopup("Farm Location");
+
+// Admin Toggle
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
+// Add delivery stop on click
+map.on("click", (e) => {
+  const stopNumber = deliveryStops.length + 1;
+  const marker = L.marker(e.latlng, {
+    icon: L.divIcon({
+      className: "custom-marker",
+      html: `<div style="background:#1f6feb;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">${stopNumber}</div>`,
+      iconSize: [24, 24]
+    })
+  }).addTo(map);
+  deliveryStops.push(e.latlng);
+});
+
 // Clear route
 document.getElementById("clear-route").onclick = () => {
-  markers.forEach(marker => map.removeLayer(marker));
-  markers = [];
-  if (control) {
-    map.removeControl(control);
-    control = null;
+  deliveryStops.length = 0;
+  map.eachLayer(layer => {
+    if (layer instanceof L.Marker && layer.getLatLng().toString() !== L.latLng(farmCoord).toString()) {
+      map.removeLayer(layer);
+    }
+  });
+  if (routingControl) {
+    map.removeControl(routingControl);
+    routingControl = null;
   }
   document.getElementById("distance").innerText = "";
   document.getElementById("cost").innerText = "";
-  document.getElementById("directions").innerHTML = "";
+  document.getElementById("steps").innerHTML = "";
 };
 
-// Calculate optimal route using OpenRouteService
+// Calculate optimized route
 document.getElementById("calculate-route").onclick = async () => {
-  if (markers.length < 1) {
-    alert("Add at least one delivery stop.");
-    return;
-  }
+  if (deliveryStops.length < 1) return alert("Add at least one stop");
 
-  const coords = [farmCoord, ...markers.map(p => [p.lat, p.lng])];
-  const locations = coords.map(c => [c[1], c[0]]); // lng, lat for API
+  const jobs = deliveryStops.map((loc, index) => ({
+    id: index + 1,
+    location: [loc.lng, loc.lat]
+  }));
+
+  const vehicle = {
+    id: 1,
+    profile: "driving-car",
+    start: [farmCoord[1], farmCoord[0]],
+    end: [farmCoord[1], farmCoord[0]],
+  };
 
   const body = {
-    jobs: locations.slice(1).map((loc, i) => ({
-      id: i + 1,
-      location: loc
-    })),
-    vehicles: [{
-      id: 1,
-      profile: "driving-car",
-      start: locations[0],
-      end: locations[0],
-    }],
+    jobs,
+    vehicles: [vehicle]
   };
 
   try {
@@ -86,35 +94,29 @@ document.getElementById("calculate-route").onclick = async () => {
         "Authorization": apiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const data = await res.json();
     const steps = data.routes[0].steps;
+    const route = [farmCoord, ...steps.map(step => [deliveryStops[step.job - 1].lat, deliveryStops[step.job - 1].lng]), farmCoord];
 
-    const orderedCoords = [locations[0], ...steps.map(s => locations[s.job])];
-
-    if (control) map.removeControl(control);
-    control = L.Routing.control({
-      waypoints: orderedCoords.map(c => L.latLng(c[1], c[0])),
-      routeWhileDragging: false,
-      addWaypoints: false,
-      draggableWaypoints: false,
+    if (routingControl) map.removeControl(routingControl);
+    routingControl = L.Routing.control({
+      waypoints: route.map(p => L.latLng(p[0], p[1])),
+      createMarker: () => null,
+      routeWhileDragging: false
     }).addTo(map);
 
-    // Distance
-    const distanceKm = data.routes[0].distance / 1000;
-    const cost = distanceKm * 5; // R5/km
-    document.getElementById("distance").innerText = `Distance: ${distanceKm.toFixed(2)} km`;
-    document.getElementById("cost").innerText = `Estimated Cost: R${cost.toFixed(2)}`;
-
-    // Directions
-    const directions = steps.map((s, i) => `<li>Stop ${i + 1}</li>`).join("");
-    document.getElementById("directions").innerHTML = `<ol>${directions}</ol>`;
+    const distKm = data.routes[0].distance / 1000;
+    const cost = distKm * 5;
+    document.getElementById("distance").innerText = `Distance: ${distKm.toFixed(2)} km`;
+    document.getElementById("cost").innerText = `Cost: R${cost.toFixed(2)}`;
+    document.getElementById("steps").innerHTML = steps.map((step, i) => `→ Stop ${i + 1}`).join("<br>");
 
   } catch (err) {
-    console.error("Route calculation error", err);
-    alert("Failed to calculate route.");
+    console.error(err);
+    alert("Failed to calculate optimized route.");
   }
 };
 
