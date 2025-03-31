@@ -14,39 +14,32 @@ const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/
   attribution: "© Esri"
 });
 
-L.control.layers({
-  "Street": osmLayer,
-  "Satellite": satelliteLayer
-}, null, { position: "bottomleft" }).addTo(map);
+L.control.layers({ "Street": osmLayer, "Satellite": satelliteLayer }, null, { position: "bottomleft" }).addTo(map);
 
-// Icons
+// ICONS
 const redIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png",
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/2776/2776067.png", // farm icon
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
 const blueIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png", // standard blue pin
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-// Fixed farm marker
 L.marker(farmCoord, { icon: redIcon }).addTo(map).bindPopup("Farm");
 
-// Toggle sidebar
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add stops on map click
 map.on("click", (e) => {
   const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
   stopMarkers.push(marker);
 });
 
-// Clear all stops and route
 document.getElementById("clear-route").onclick = () => {
   stopMarkers.forEach(m => map.removeLayer(m));
   stopMarkers = [];
@@ -56,19 +49,18 @@ document.getElementById("clear-route").onclick = () => {
   }
   document.getElementById("distance").innerText = "";
   document.getElementById("cost").innerText = "";
+  document.getElementById("instructions").innerHTML = "";
 };
 
-// Calculate shortest route
 document.getElementById("calculate-route").onclick = async () => {
-  if (stopMarkers.length === 0) {
-    alert("Add at least one stop.");
-    return;
-  }
+  if (stopMarkers.length < 1) return alert("Add at least one stop.");
 
-  const coords = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  const coordinates = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  const orsCoords = coordinates.map(c => [c[1], c[0]]); // lng, lat
 
   const body = {
-    coordinates: coords.map(c => [c[1], c[0]]) // [lng, lat] format for ORS
+    coordinates: orsCoords,
+    instructions: true
   };
 
   try {
@@ -81,9 +73,8 @@ document.getElementById("calculate-route").onclick = async () => {
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) throw new Error("API error");
-
     const data = await res.json();
+
     const dist = data.features[0].properties.summary.distance / 1000;
     const cost = dist * 5;
 
@@ -92,8 +83,16 @@ document.getElementById("calculate-route").onclick = async () => {
       style: { color: "#1f6feb", weight: 5 }
     }).addTo(map);
 
+    // Show step-by-step instructions
+    const steps = data.features[0].properties.segments[0].steps;
+    const instructionsHTML = steps.map((step, i) =>
+      `<div><strong>Step ${i + 1}:</strong> ${step.instruction} (${(step.distance / 1000).toFixed(2)} km)</div>`
+    ).join("");
+
     document.getElementById("distance").innerText = `Distance: ${dist.toFixed(2)} km`;
     document.getElementById("cost").innerText = `Cost: R${cost.toFixed(2)}`;
+    document.getElementById("instructions").innerHTML = instructionsHTML;
+
   } catch (err) {
     alert("Failed to calculate route.");
     console.error(err);
