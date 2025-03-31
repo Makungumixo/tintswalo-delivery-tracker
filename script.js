@@ -1,52 +1,50 @@
 const apiKey = "5b3ce3597851110001cf624899017faaa5cc44228022ed43274258bf";
-const farmCoord = [-23.35906, 30.50142]; // Tintswalo's Poultry Farm
-
+const farmCoord = [-23.35906, 30.50142];
 let stopMarkers = [];
 let routeLine = null;
 
-// Initialize the map
 const map = L.map("map").setView(farmCoord, 13);
 
-// Base Layers
 const osmLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors"
 }).addTo(map);
 
 const satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-  attribution: "© Esri, NASA, NGA"
+  attribution: "© Esri"
 });
 
-L.control.layers(
-  {
-    "Street View": osmLayer,
-    "Satellite View": satelliteLayer
-  },
-  null,
-  { position: "bottomleft" }
-).addTo(map);
+L.control.layers({
+  "Street": osmLayer,
+  "Satellite": satelliteLayer
+}, null, {
+  position: "bottomleft"
+}).addTo(map);
 
-// Custom blue icon
+// Blue location icon
 const blueIcon = L.icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/854/854878.png",
   iconSize: [32, 32],
   iconAnchor: [16, 32]
 });
 
-// Mark the farm
-L.marker(farmCoord, { icon: blueIcon }).addTo(map).bindPopup("Tintswalo’s Poultry Farm");
+// Add fixed farm marker
+L.marker(farmCoord, { icon: blueIcon })
+  .addTo(map)
+  .bindPopup("Farm")
+  .openPopup();
 
-// Toggle admin sidebar
+// Toggle sidebar
 document.getElementById("toggle-admin").onclick = () => {
   document.getElementById("admin-sidebar").classList.toggle("hidden");
 };
 
-// Add stops by clicking on the map
+// Add marker on click
 map.on("click", (e) => {
   const marker = L.marker(e.latlng, { icon: blueIcon }).addTo(map);
   stopMarkers.push(marker);
 });
 
-// Clear stops and route
+// Clear all
 document.getElementById("clear-route").onclick = () => {
   stopMarkers.forEach(m => map.removeLayer(m));
   stopMarkers = [];
@@ -58,46 +56,52 @@ document.getElementById("clear-route").onclick = () => {
   document.getElementById("cost").innerText = "";
 };
 
-// Calculate optimal delivery route
+// Calculate shortest optimized route
 document.getElementById("calculate-route").onclick = async () => {
-  if (stopMarkers.length === 0) {
-    alert("Add at least one stop.");
-    return;
-  }
+  if (stopMarkers.length < 1) return alert("Add at least one stop.");
 
-  const coords = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
+  const coordinates = [farmCoord, ...stopMarkers.map(m => [m.getLatLng().lat, m.getLatLng().lng])];
 
   try {
-    const res = await fetch("https://api.openrouteservice.org/v2/directions/driving-car/geojson", {
+    const res = await fetch("https://api.openrouteservice.org/optimization", {
       method: "POST",
       headers: {
         "Authorization": apiKey,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        coordinates: coords.map(([lat, lng]) => [lng, lat]),
-        optimize_waypoints: true
+        jobs: coordinates.slice(1).map((coord, i) => ({
+          id: i + 1,
+          location: [coord[1], coord[0]]
+        })),
+        vehicles: [{
+          id: 1,
+          start: [farmCoord[1], farmCoord[0]],
+          end: [coordinates[coordinates.length - 1][1], coordinates[coordinates.length - 1][0]]
+        }]
       })
     });
 
-    const data = await res.json();
-    const dist = data.features[0].properties.summary.distance / 1000; // km
-    const cost = dist * 5; // R5 per km
+    const result = await res.json();
+    const ordered = result.routes[0].steps.map(s => s.location);
 
     if (routeLine) map.removeLayer(routeLine);
-    routeLine = L.geoJSON(data.features[0].geometry, {
-      style: { color: "#1f6feb", weight: 5 }
+
+    const routeCoords = ordered.map(([lng, lat]) => [lat, lng]);
+
+    routeLine = L.polyline(routeCoords, {
+      color: "#1f6feb",
+      weight: 5
     }).addTo(map);
 
-    document.getElementById("distance").innerText = `Distance: ${dist.toFixed(2)} km`;
+    const distance = result.routes[0].distance / 1000;
+    const cost = distance * 5;
+
+    document.getElementById("distance").innerText = `Distance: ${distance.toFixed(2)} km`;
     document.getElementById("cost").innerText = `Cost: R${cost.toFixed(2)}`;
+
   } catch (err) {
     alert("Failed to calculate route.");
     console.error(err);
   }
 };
-
-
-
-
-
