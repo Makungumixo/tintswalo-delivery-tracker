@@ -5,27 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tintswalo’s Poultry Delivery Tracker</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.min.js"></script>
 </head>
 <body>
-  <button id="admin-toggle">Admin Mode</button>
-
-  <div id="sidebar" class="hidden">
-    <h2>Delivery Settings</h2>
-    <p><strong>Rate:</strong> <input id="rate" type="number" value="5" /> R/km</p>
-    <button onclick="calculateOptimizedRoute()">Calculate Route</button>
-    <button onclick="clearRoute()">Clear Route</button>
-    <p id="cost"></p>
-  </div>
 
   <div id="map"></div>
+
+  <!-- Admin Mode Toggle -->
+  <button id="admin-toggle">Admin Mode</button>
+
+  <!-- Sidebar -->
+  <div id="sidebar" class="collapsed">
+    <h2>Admin Mode</h2>
+    <p>Click on map to add delivery stops</p>
+    <label for="rate">Rate per km (ZAR):</label>
+    <input type="number" id="rate" value="5" min="1"/>
+
+    <button onclick="calculateRoute()">Calculate Route</button>
+    <button onclick="clearRoute()">Clear Route</button>
+    <div id="cost-display"></div>
+  </div>
+
+  <!-- Satellite Toggle -->
+  <div id="satellite-toggle">
+    <input type="checkbox" id="toggle-sat"/>
+    <label for="toggle-sat">Satellite View</label>
+  </div>
 
   <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
